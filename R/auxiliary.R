@@ -1,0 +1,737 @@
+
+
+
+################################################################################
+
+#' Modified switch function
+#'
+#' An altered \code{switch} statement for stricter flow control.
+#'
+#' @param EXPR A character or numeric scalar based on which a decision is made.
+#' @param ... Additional arguments from which to select an alternative.
+#' @return Selected value from \code{\dots}.
+#' @details If \code{EXPR} is a character scalar, the behaviour is like
+#'   the one of \code{switch} with the exception that unmatched values within
+#'   \code{\dots} cause an error. If \code{EXPR} is of mode \sQuote{numeric},
+#'   the behaviour is like \code{switch} but counting starts at 0 and a value
+#'   larger than the number of elements within \code{\dots} selects the last
+#'   element. It is an error if \code{EXPR} is negative or if \code{\dots}
+#'   contains no arguments at all.
+#' @export
+#' @seealso base::switch
+#' @family auxiliary-functions
+#' @keywords utilities
+#' @examples
+#'
+#' # 'numeric' method
+#' (x <- case(0, "a", "b", "c"))
+#' stopifnot(identical(x, "a"))
+#' (x <- case(99, "a", "b", "c"))
+#' stopifnot(identical(x, "c"))
+#'
+#' # 'character' method
+#' (x <- case("b", a = "x", b = "y", c = "z"))
+#' stopifnot(identical(x, "y"))
+#' (x <- try(case("d", a = "x", b = "y", c = "z"), silent = TRUE))
+#' stopifnot(inherits(x, "try-error"))
+#'
+case <- function(EXPR, ...) UseMethod("case")
+
+#' @rdname case
+#' @method case numeric
+#' @export
+#'
+case.numeric <- function(EXPR, ...) {
+  stopifnot(EXPR >= 0L, nargs() > 1L)
+  switch(EXPR = pmin(EXPR, nargs() - 2L) + 1L, ...)
+}
+
+#' @rdname case
+#' @method case character
+#' @export
+#'
+case.character <- function(EXPR, ...) {
+  switch(EXPR = EXPR, ..., stop("unmatched 'EXPR' value"))
+}
+
+
+################################################################################
+
+#' Convert warnings to errors
+#'
+#' Raise an error if a warning occurs. Useful for making certain tests more
+#' strict. It is a bit easier to use than changing the \sQuote{warn} entry of
+#' \code{options} from the \pkg{base} package (because the entry would usually
+#' need to be set back).
+#'
+#' @param expr \R expression to evaluate.
+#' @param msg Character vector to be used as error message. If empty or
+#'   \code{NULL}, the \code{conditionMessage} of the issued warning is used.
+#' @param ... Optional further arguments to \code{tryCatch}.
+#' @param domain Passed to \code{stop} (if a warning occurs).
+#' @return The result of \code{expr} (if no error occurs).
+#' @export
+#' @seealso base::tryCatch base::stop base::options
+#' @family auxiliary-functions
+#' @keywords utilities
+#' @examples
+#' (x <- try(must(as.numeric(c("1", "2", "3"))), silent = TRUE))
+#' stopifnot(identical(x, c(1, 2, 3)))
+#' (x <- try(must(as.numeric(c("1", "x", "3"))), silent = TRUE))
+#' stopifnot(inherits(x, "try-error"))
+#'
+must <- function(expr, msg = NULL, ..., domain = NULL) {
+  # For some reason, using stop() directly resulted in errors that could not be
+  # catched with tryCatch() any more.
+  tryCatch(expr = expr, warning = function(w) stop(if (length(msg))
+    msg
+  else
+    conditionMessage(w), call. = FALSE, domain = domain), ...)
+}
+
+
+################################################################################
+
+
+#' Assert a length
+#'
+#' Raise an error if a given \R object does not have the specified length. This
+#' is mainly used to easily generate meaningful error messages related to
+#' function arguments.
+#'
+#' @param x \R object to test.
+#' @param .wanted Integer scalar giving the desired length. Note that this can
+#'   \strong{not} be a scalar with \sQuote{double} as \code{storage.mode}.
+#' @param .msg Error message passed to \code{sprintf} with the name of \code{x}
+#'   and the value of \code{wanted} as the two additional arguments.
+#' @param .domain Passed to \code{stop} from the \pkg{base} package as argument
+#'   \sQuote{domain}.
+#' @return If successful, \code{x}, but an error message is raised if
+#'   \code{length(x)} is not identical to \code{wanted}.
+#' @seealso base::stop
+#' @export
+#' @family auxiliary-functions
+#' @keywords utilities
+#' @examples
+#' (x <- L(letters, 26L))
+#' stopifnot(identical(x, letters))
+#' (x <- try(L(letters, 25L), silent = TRUE))
+#' stopifnot(inherits(x, "try-error"))
+#'
+L <- function(x, .wanted = 1L, .msg = "need object '%s' of length %i",
+    .domain = NULL) {
+  if (identical(length(x), .wanted))
+    return(x)
+  stop(sprintf(.msg, as.character(match.call()[2L]), .wanted), call. = FALSE,
+    domain = .domain)
+}
+
+
+################################################################################
+
+
+#' Assert lengths
+#'
+#' Raise an error if one of several \R objects does not have the specified
+#' length. This is mainly used to easily generate meaningful error messages
+#' related to function arguments.
+#'
+#' @inheritParams L
+#' @param ... Any \R objects to test.
+#' @return The names of the arguments contained in \code{\dots}, returned
+#'   invisibly, if successful. Otherwise an error is raised.
+#' @seealso base::stop
+#' @export
+#' @family auxiliary-functions
+#' @keywords utilities
+#' @examples
+#' (x <- LL(letters, LETTERS, .wanted = 26L))
+#' stopifnot(x == c("letters", "LETTERS"))
+#'
+LL <- function(..., .wanted = 1L, .msg = "need object '%s' of length %i",
+    .domain = NULL) {
+  arg.names <- as.character(match.call())[-1L][seq_along(items <- list(...))]
+  invisible(mapply(function(item, name) {
+    if (!identical(length(item), .wanted))
+      stop(sprintf(.msg, name, .wanted), call. = FALSE, domain = .domain)
+    name
+  }, items, arg.names, SIMPLIFY = FALSE, USE.NAMES = FALSE))
+}
+
+
+################################################################################
+
+
+
+#' Create sections
+#'
+#' The \sQuote{logical} method treats a logical vector by regarding \code{TRUE}
+#' as indicating separation. It creates a factor that could be used with 
+#' \code{split} to split the logical vector, or any equal-length object from
+#' which it was created, into according groups. The \sQuote{character} method
+#' splits a character vector according to a pattern or to a given output
+#' substring length.
+#'
+#' @inheritParams pack_desc
+#' @param x Logical vector. It is an error if \code{NA} values are contained.
+#' @param include Logical scalar indicating whether the separator positions
+#'   should also be included in the factor levels instead of being coded as
+#'   \code{NA}.
+#' @param pattern Scalar. If of mode \sQuote{character}, passed to 
+#'   \code{grepl}. If numeric, used to indicate the lengths of the substrings
+#'   to extract.
+#' @param invert Negate the results of \code{grepl}?
+#' @return The \sQuote{logical} method returns an
+#'   ordered factor, its length being the one of \code{x}. The levels
+#'   correspond to a groups whose indices correspond to the index of a
+#'   \code{TRUE} value in \code{x} plus the indices of the \code{FALSE}
+#'   values immediately following it. \sQuote{logical} method returns a list
+#'   of character vectors.
+#' @details When applying \code{split}, positions corresponding to \code{NA}
+#'   factor levels will usually be removed. Thus note the action of the
+#'   \code{include} argument, and note that the positions of \code{TRUE} values
+#'   that are followed by other \code{TRUE} values are always set to \code{NA},
+#'   irrespective of \code{include}. The \sQuote{character} method using a 
+#'   pattern works by passing this pattern to \code{grepl}, the result to
+#'   the \sQuote{logical} method and this in turn to \code{split}.
+#'
+#' @seealso base::split base::grepl
+#' @export
+#' @family auxiliary-functions
+#' @keywords utilities
+#' @examples
+#'
+#' ## 'logical' method
+#'
+#' # clean input
+#' x <- c(TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE)
+#' (y <- sections(x))
+#' stopifnot(identical(as.ordered(c(1, 1, 1, 2, 2, 3, 3)), y))
+#' 
+#' # now exclude the separators
+#' y <- sections(x, include = FALSE)
+#' stopifnot(identical(as.ordered(c(NA, 1, 1, NA, 2, NA, 3)), y))
+#' 
+#' # leading FALSE
+#' x <- c(FALSE, x)
+#' (y <- sections(x))
+#' stopifnot(identical(as.ordered(c(1, 2, 2, 2, 3, 3, 4, 4)), y))
+#' 
+#' # adjacent TRUEs and trailing TRUE
+#' x <- c(FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE)
+#' (y <- sections(x))
+#' stopifnot(identical(as.ordered(c(1, NA, 2, 2, 3, 3, NA, 4, 4, 5)), y))
+#' 
+#' # several adjacent TRUEs
+#' x <- c(FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE)
+#' (y <- sections(x))
+#' stopifnot(identical(as.ordered(c(1, NA, NA, NA, 2, 2, 3, 3)), y))
+#'
+#' ## 'character' method
+#'
+#' # using a specified length
+#' x <- c("abcdef", "ghijk")
+#' (y <- sections(x, 2))
+#' stopifnot(is.list(y), length(y) == 2)
+#' stopifnot(y[[1]] == c("ab", "cd", "ef"), y[[2]] == c("gh", "ij", "k"))
+#'
+#' # using a regexp pattern
+#' x <- c(">abc", ">def", "acgtagg", ">hij", "gatattag", "aggtagga") # FASTA
+#' (y <- sections(x, "^>", include = TRUE))
+#' stopifnot(identical(y, list(`1` = x[2:3], `2` = x[4:6])))
+#' (y <- sections(x, "^>", include = FALSE))
+#' stopifnot(identical(y, list(`1` = x[3], `2` = x[5:6])))
+#'
+sections <- function(x, ...) UseMethod("sections")
+
+#' @rdname sections
+#' @method sections logical
+#' @export
+#'
+sections.logical <- function(x, include = TRUE, ...) {
+  prepare_sections <- function(x) {
+    if (prepend <- !x[1L])
+      x <- c(TRUE, x)
+    if (append <- x[n <- length(x)])
+      x <- c(x, FALSE)
+    x <- matrix(cumsum(rle(x)$lengths), ncol = 2L, byrow = TRUE)
+    x <- x[, 2L] - x[, 1L] + 1L
+    x <- mapply(rep.int, seq_along(x), x, SIMPLIFY = FALSE, USE.NAMES = FALSE)
+    x <- unlist(x)
+    if (prepend)
+      x <- x[-1L]
+    if (append)
+      x <- x[-n]
+    x
+  }
+  if (!(n <- length(x)))
+    return(structure(factor(ordered = TRUE), .Names = names(x)))
+  stopifnot(complete.cases(x))
+  result <- integer(n)
+  true.runs <- x & c(x[-1L] == x[-n], FALSE)
+  result[!true.runs] <- prepare_sections(x[!true.runs])
+  if (L(include))
+    result[true.runs] <- NA_integer_
+  else
+    result[x] <- NA_integer_
+  structure(as.ordered(result), .Names = names(x))
+}
+
+
+#' @rdname sections
+#' @method sections character
+#' @export
+#'
+sections.character <- function(x, pattern, invert = FALSE, include = TRUE,
+    ...) {
+  if (is.character(pattern)) {
+    y <- grepl(pattern = pattern, x = x, ...)
+    if (L(invert))
+      y <- !y
+    split.default(x = x, f = sections(x = y, include = include))
+  } else if (is.numeric(pattern)) {
+    if (identical(pattern <- as.integer(pattern), 1L))
+      return(strsplit(x, "", fixed = TRUE))
+    pattern <- sprintf("(.{%i,%i})", pattern, pattern)
+    strsplit(gsub(pattern, "\\1\a", x, perl = TRUE), "\a", fixed = TRUE)
+  } else
+    stop("'pattern' must be a character or numeric scalar")
+}
+
+
+################################################################################
+
+
+#' Get or set logfile
+#'
+#' Get or set the name of the logfile used by \pkg{pkgutils}.
+#'
+#' @param x Character scalar for setting the logfile, or \code{NULL} for
+#'   getting the current value.
+#' @export
+#' @return Character scalar with the name of the current logfile.
+#' @details Functions such as \code{\link{check_keywords}} print detected
+#'   problems, if any, using \code{message}. These character vectors can also
+#'   be safed by appending to a logfile.
+#' @keywords IO
+#' @family auxiliary-functions
+#' @examples
+#' old <- logfile()
+#' new <- tempfile()
+#' logfile(new)
+#' stopifnot(new == logfile())
+#' logfile(old)
+#' stopifnot(old == logfile())
+#'
+logfile <- function(x) UseMethod("logfile")
+
+#' @rdname logfile
+#' @method logfile NULL
+#' @export
+#'
+logfile.NULL <- function(x) {
+  PKGUTILS_OPTIONS$logfile
+}
+
+#' @rdname logfile
+#' @method logfile character
+#' @export
+#'
+logfile.character <- function(x) {
+  old <- PKGUTILS_OPTIONS$logfile
+  PKGUTILS_OPTIONS$logfile <- L(stats::na.fail(x))
+  if (nzchar(x))
+    tryCatch(cat(sprintf("\nLOGFILE RESET AT %s\n", date()), file = x,
+      append = TRUE), error = function(e) {
+        PKGUTILS_OPTIONS$logfile <- old
+        stop(e)
+      })
+  invisible(x)
+}
+
+
+################################################################################
+
+
+#' Map files
+#'
+#' Read lines from a file, modify the lines using a given function, and write
+#' the lines back to the input file unless the result of applying the function
+#' is identical to the lines read.
+#'
+#' @param x Character vector of input (and potentially output) file names.
+#' @param mapfun Mapping function, receives character vector with the lines per
+#'   file as first argument, with the name of the file added as attribute with
+#'   the name given using \code{.attr}.
+#' @param ... Optional additional arguments passed to \code{fun}.
+#' @param .attr Character scalar. See description to \code{mapfun}.
+#' @param .encoding Passed to \code{readLines} as \sQuote{encoding} argument.
+#' @details If \code{mapfun} returns \code{NULL}, it is ignored. Otherwise
+#'   is it an error if \code{mapfun} does not return a character vector. If
+#'   this vector is identical to the lines read from the file, it is not
+#'   printed to this file. Otherwise the file is attempted to be overwritten
+#'   with the result of \code{mapfun}.
+#' @return Logical vector using \code{x} as names, with \code{TRUE} indicating
+#'   a successfully modified file, \code{FALSE} a file that yielded no errors
+#'   but needed not to be modified, and \code{NA} a filename that caused an
+#'   error. An attribute \sQuote{errors} is provided, containing a character
+#'   vector with error messages (empty strings if no error occurred).
+#' @family auxiliary-functions
+#' @export
+#' @keywords IO
+#' @examples
+#' tmpfile <- tempfile()
+#' write(letters, file = tmpfile)
+#' (x <- map_files(tmpfile, identity))
+#' stopifnot(!x)
+#' (x <- map_files(tmpfile, toupper))
+#' stopifnot(x)
+#' x <- readLines(tmpfile)
+#' stopifnot(x == LETTERS)
+#' (x <- map_files(tmpfile, as.null))
+#' stopifnot(!x)
+#'
+map_files <- function(x, ...) UseMethod("map_files")
+
+#' @method map_files character
+#' @rdname map_files
+#' @export
+#'
+map_files.character <- function(x, mapfun, ..., .attr = ".filename",
+    .encoding = "unknown") {
+  doit <- function(filename) tryCatch({
+    add_attr <- function(x) {
+      attr(x, .attr) <- filename
+      x
+    }
+    x <- readLines(con = filename, encoding = .encoding)
+    if (is.null(y <- mapfun(add_attr(x), ...)))
+      return(list(FALSE, ""))
+    attributes(y) <- NULL
+    if (identical(x, y))
+      return(list(FALSE, ""))
+    if (!is.character(y))
+      stop("applying 'matchfun' did not yield a character vector")
+    write(x = y, file = filename)
+    list(TRUE, "")
+  }, error = function(e) list(NA, conditionMessage(e)))
+  mapfun <- match.fun(mapfun)
+  if (!length(x))
+    return(structure(logical(), .Names = character(), errors = character()))
+  result <- do.call(rbind, lapply(x, doit))
+  structure(unlist(result[, 1L]), .Names = x, errors = unlist(result[, 2L]))
+}
+
+
+################################################################################
+
+
+#' Run a Ruby script
+#'
+#' Run Ruby with an externally provided Ruby script or with code provided at
+#' the command line with \sQuote{-e}.
+#'
+#' @param x Character vector containing the name of a script and optionally,
+#'   after that name, the script's arguments. If a numeric vector, a required
+#'   minimum Ruby version. A command is then constructed that only results if
+#'   this version requirement is met. If \code{NULL}, the path to the Ruby
+#'   executable is returned, or an empty string if this is not found.
+#' @param args Character vector with arguments passed to Ruby before the
+#'   content of \code{x}. \sQuote{--} is appended automatically. Note that any
+#'   \sQuote{-e} argument would cause a character vector \code{x} to be
+#'   ignored, and that otherwise an empty \code{x} character vector would cause
+#'   the Ruby process to hang (wait for input that will not arrive).
+#' @param ruby Character scalar containing the name of the Ruby executable. It
+#'   is an error if this file is not found using \code{Sys.which}.
+#' @param ... Optional arguments (except \sQuote{command}) passed to
+#'   \code{system} from the \pkg{base} package.
+#' @return Unless \code{x} is \code{NULL}, the result of a call to
+#'   \code{system}. This is an integer scalar unless \code{\dots} dictates
+#'   otherwise.
+#' @keywords interface
+#' @export
+#' @seealso base::system base::Sys.which
+#' @family auxiliary-functions
+#' @examples
+#' if (nzchar(run_ruby(NULL))) {
+#'   # run a dummy Ruby command that does nothing
+#'   (x <- run_ruby(x = character(), args = "-e'nil'"))
+#'   stopifnot(identical(x, 0L))
+#' } else {
+#'   warning("cannot find 'ruby'")
+#' }
+#'
+run_ruby <- function(x, ...) UseMethod("run_ruby")
+
+#' @rdname run_ruby
+#' @method run_ruby NULL
+#' @export
+#'
+run_ruby.NULL <- function(x, ruby = "ruby", ...) {
+  unname(Sys.which(L(ruby)))
+}
+
+#' @rdname run_ruby
+#' @method run_ruby numeric
+#' @export
+#'
+run_ruby.numeric <- function(x, args = "-w", ruby = "ruby", ...) {
+  y <- "-e'raise \"need Ruby %.1f.0 or higher\" if RUBY_VERSION.to_f < %.1f'"
+  args <- c(sprintf(y, x, x), args)
+  run_ruby(x = character(), args = args, ruby = ruby, ...)
+}
+
+#' @rdname run_ruby
+#' @method run_ruby character
+#' @export
+#'
+run_ruby.character <- function(x, args = "-w", ruby = "ruby", ...) {
+  if (!nzchar(ruby <- run_ruby(x = NULL, ruby = ruby)))
+    stop(sprintf("cannot find executable '%s'", ruby))
+  command <- paste(c(ruby, setdiff(args, "--"), "--", x), collapse = " ")
+  do.call(system, list(command = command, ...))
+}
+
+
+################################################################################
+
+
+#' Run a Ruby script provided by the package
+#'
+#' Run Ruby with one of the Ruby scripts that come with the \pkg{pkgutils}
+#' package, and a selection of input files.
+#'
+#' @inheritParams repair_S4_docu
+#' @param script Character scalar indicating the name of the script to use
+#'   (without directory name).
+#' @param ... Optional arguments passed to \code{\link{run_ruby}}.
+#' @return Result of a call to \code{\link{run_ruby}}.
+#' @keywords internal
+#'
+run_pkgutils_ruby <- function(x, ...) UseMethod("run_pkgutils_ruby")
+
+#' @rdname run_pkgutils_ruby
+#' @method run_pkgutils_ruby character
+#'
+run_pkgutils_ruby.character <- function(x, script, ignore, ...) {
+  aux.file <- pkg_files("pkgutils", what = "auxiliary")
+  aux.file <- L(aux.file[tolower(basename(aux.file)) == tolower(script)])
+  x <- pkg_files(x, what = "R", installed = FALSE, ignore = ignore)
+  errs <- run_ruby(x = c(aux.file, x), ...)
+  if (is.integer(errs) && !identical(errs, 0L))
+    run_ruby(x = 1.9, ...) # to show Ruby version problems, if any
+  errs
+}
+
+
+################################################################################
+
+
+#' Prepare command-line options
+#'
+#' Simply routine to add leading dashes to strings for use as command-line
+#' options. Works with options arguments, but only if these are separated from
+#' the option by \sQuote{=}.
+#'
+#' @param x Character vector or \code{NULL}.
+#' @return Character vector.
+#' @keywords internal
+#'
+prepare_options <- function(x) UseMethod("prepare_options")
+
+#' @rdname prepare_options
+#' @method prepare_options NULL
+#'
+prepare_options.NULL <- function(x) {
+  character()
+}
+
+#' @rdname prepare_options
+#' @method prepare_options character
+#'
+prepare_options.character <- function(x) {
+  x <- sub("^-+", "", x, perl = TRUE)
+  len1 <- nchar(sub("=.*$", "", x, perl = TRUE)) == 1L
+  x[len1] <- sprintf("-%s", x[len1])
+  x[!len1] <- sprintf("--%s", x[!len1])
+  x
+}
+
+
+################################################################################
+
+
+#' Output some R object
+#'
+#' Generic function for outputting \R objects. Currently defined for some of
+#' the classes relevant in this package.
+#'
+#' @inheritParams pack_desc
+#' @param x Object of class \sQuote{class_desc}, \sQuote{classes_desc},
+#'   \sQuote{pack_desc}, \sQuote{pack_descs} or \sQuote{Rd}.
+#' @param file Character vector of file names to which the data in \code{x}
+#'   shall be written.
+#~ @export
+#' @return \code{x}, returned invisibly.
+#' @seealso base::cat base::write
+#~ @family auxiliary-functions
+#~ @keywords IO
+#' @keywords internal
+#~ @examples
+#~ x <- class_rdfiles("methods", "ObjectsWithPackage", "content")
+#~ y <- puts(x, "")
+#~ stopifnot(identical(x, y))
+#'
+puts <- function(x, file, ...) UseMethod("puts")
+
+#' @rdname puts
+#' @method puts classes_desc
+#' @export
+#'
+puts.classes_desc <- function(x, file, ...) {
+  invisible(structure(mapply(FUN = puts, x = x, file = file,
+    MoreArgs = list(...), SIMPLIFY = FALSE), class = oldClass(x)))
+}
+
+#' @rdname puts
+#' @method puts class_desc
+#' @export
+#'
+puts.class_desc <- function(x, file, ...) {
+  cat(unlist(x), file = file, sep = "\n", ...)
+  invisible(x)
+}
+
+#' @rdname puts
+#' @method puts Rd
+#' @export
+#'
+puts.Rd <- function(x, file, ...) {
+  cat(as.character(x, deparse = TRUE), file = file, sep = "", ...)
+  invisible(x)
+}
+
+#' @rdname puts
+#' @method puts pack_desc
+#' @export
+#'
+puts.pack_desc <- function(x, file, ...) {
+  write.dcf(x = unclass(x), file = file, ...)
+  invisible(x)
+}
+
+#' @rdname puts
+#' @method puts pack_descs
+#' @export
+#'
+puts.pack_descs <- function(x, file, ...) {
+  invisible(structure(mapply(FUN = puts, x = x, file = file,
+    MoreArgs = list(...), SIMPLIFY = FALSE), class = oldClass(x)))
+}
+
+
+################################################################################
+
+
+#' Print message indicating problem
+#'
+#' Simple utility to print a message indicating a certain problem. Optionally
+#' also note an input file in which the problem occurs.
+#'
+#' @param x Character vector.
+#' @param infile Name of input file. Use \code{NULL} to ignore it.
+#' @param line Number of input line. Use \code{NULL} to ignore it.
+#' @export
+#' @return Character vector.
+#' @keywords internal
+#'
+problem <- function(x, ...) UseMethod("problem")
+
+#' @rdname problem
+#' @method problem character
+#'
+problem.character <- function(x, infile = NULL, line = NULL, ...) {
+  infile <- sprintf(" '%s'", infile)
+  line <- sprintf(" (line %i)", line)
+  msg <- "PROBLEM in file"
+  msg <- paste(msg, infile, line, ": ", x, sep = "", collapse = "\n")
+  message(msg)
+  if (nzchar(logfile <- get("logfile", PKGUTILS_OPTIONS)))
+    cat(msg, sep = "\n", file = logfile, append = TRUE)
+  invisible(NULL)
+}
+
+
+################################################################################
+
+
+#' Load R files with source
+#'
+#' Load \R code files with \code{source} from the \pkg{base} package (which
+#' does only handle one file at a time). This is mainly useful for loading
+#' entire packages with \code{source}; the the \sQuote{what} argument of
+#' \code{\link{pack_desc}} for an example.
+#'
+#' @param x Character vector of file names, or object of class
+#'   \sQuote{pack_desc} or \sQuote{pack_descs}.
+#' @param demo Logical scalar. See \code{\link{pack_desc}}.
+#' @param ... Optional additional arguments passed between the methods and
+#'   finally to \code{source}.
+#' @return List of lists with the results of calling \code{source}. For the
+#'   action of the \sQuote{pack_desc} or \sQuote{pack_descs} methods, see
+#'   \code{\link{pack_desc}}.
+#~ @family auxiliary-functions
+#~ @export
+#' @keywords internal
+#~ @examples
+#~
+#~ # character method
+#~ stopifnot(!sapply(vars <- c("foo", "bar"), exists))
+#~ tmpfile1 <- tempfile()
+#~ tmpfile2 <- tempfile()
+#~ cat("foo <- 1", file = tmpfile1)
+#~ cat("bar <- 2", file = tmpfile2)
+#~ source_files(c(tmpfile1, tmpfile2))
+#~ stopifnot(sapply(vars, exists))
+#~ rm(list = vars) # tidy up
+#~
+#~ # for the 'pack_desc' and 'pack_descs' methods, see pack_desc()
+#'
+source_files <- function(x, ...) UseMethod("source_files")
+
+#' @method source_files character
+#' @rdname source_files
+#' @export
+#'
+source_files.character <- function(x, ...) {
+  doit <- function(file) source(file = file, ...)
+  invisible(sapply(x, doit, simplify = FALSE))
+}
+
+#' @method source_files pack_descs
+#' @rdname source_files
+#' @export
+#'
+source_files.pack_descs <- function(x, ...) {
+  invisible(sapply(X = x, FUN = source_files, ..., simplify = FALSE))
+}
+
+#' @method source_files pack_desc
+#' @rdname source_files
+#' @export
+#'
+source_files.pack_desc <- function(x, demo = FALSE, ...) {
+  y <- subset(x)
+  y <- list(depends = y$Depends, imports = y$Imports,
+    r.files = file.path(dirname(attr(x, "filename")), "R", y$Collate))
+  if (L(demo))
+    return(y)
+  for (e in unlist(y[c("Depends", "Imports")]))
+    require(e, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)
+  invisible(source_files(x = y$r.files, ...))
+}
+
+
+################################################################################
+
+
