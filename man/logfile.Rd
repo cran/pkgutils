@@ -16,6 +16,7 @@
 }
 \value{
   Character scalar with the name of the current logfile.
+  Use an empty string to turn logging off.
 }
 \description{
   Get or set the name of the logfile used by
@@ -38,7 +39,7 @@ stopifnot(old == logfile())
 \seealso{
   Other auxiliary-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{map_files}},
+    \code{\link{listing}},       \code{\link{map_files}},
   \code{\link{must}},
   \code{\link{run_ruby}},     \code{\link{sections}},
     }

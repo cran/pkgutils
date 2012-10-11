@@ -129,8 +129,8 @@ pack_desc.character <- function(pkg, action = c("read", "update", "source"),
 #' @keywords package
 #' @seealso base::system
 #' @examples
-#' # See the 'docu.R' script provided with this package, options '--check' and
-#' # '--install'.
+#' # See the 'docu.R' script provided with this package, options '--check',
+#' # '--install' and '--yes'.
 #'
 run_R_CMD <- function(x, ...) UseMethod("run_R_CMD")
 
@@ -429,13 +429,16 @@ delete_o_files.character <- function(x, ext = "o", ignore = NULL, ...) {
 #'   control-flow constructs are not directly followed by parentheses, that
 #'   opening parentheses (and brackets) are not followed by a space, and that
 #'   closing parentheses (and brackets) are followed by appropriate characters
-#'   only.
+#'   only and are not preceded by a space.
+#' @param assign Logical scalar indicating that it should be checked that
+#'   there is no linebreak within named function-argument assignments.
 #' @param modify Logical scalar indicating whether the source code should be
 #'   modified (non-destructively, of course) and input files overwritten (if
 #'   changes were possible). The modifications currently only comprise the
 #'   removal of whitespace from the ends of the lines.
 #' @param ... Optional arguments passed to \code{\link{pkg_files}}.
-#' @return Logical vector; see \code{\link{map_files}} for details. As a side
+#' @return Logical vector; see \code{\link{map_files}} for details. Here
+#'   the result is returned invisibly. As a side
 #'   effect, problem messages are printed to \code{stderr}. See
 #'   \code{\link{logfile}} for how to send these messages to a file.
 #' @details This function is intended to ensure a consistent and readable \R
@@ -447,8 +450,20 @@ delete_o_files.character <- function(x, ext = "o", ignore = NULL, ...) {
 #' @family package-functions
 #' @export
 #' @examples
-#' # See the 'docu.R' script provided with this package, options '--blank',
-#' # '--jspaces' and '--width'.
+#'
+#' # Checking the R scripts that come with the package
+#' (scripts <- pkg_files("pkgutils", "scripts"))
+#' if (length(scripts)) {
+#'   result <- check_R_code(scripts) # should not yield any messages
+#'   stopifnot(is.logical(result), names(result) == names(scripts))
+#' } else {
+#'   warning("scripts not found")
+#' }
+#'
+#' # See also the 'docu.R' script provided with this package, options
+#' # '--blank', '--jspaces', '--width', '--assignoff', '--commaoff',
+#' # '--opsoff', '--modify', '--good', '--parensoff', '--Rcheck' and
+#' # '--untidy'. Checking can be turned off generally or specifically.
 #'
 check_R_code <- function(x, ...) UseMethod("check_R_code")
 
@@ -458,8 +473,8 @@ check_R_code <- function(x, ...) UseMethod("check_R_code")
 #'
 check_R_code.character <- function(x, lwd = 80L, indention = 2L,
     roxygen.space = 1L, comma = TRUE, ops = TRUE, parens = TRUE,
-    modify = FALSE, ignore = NULL, ...) {
-  LL(lwd, indention, roxygen.space, modify, comma, ops, parens)
+    assign = TRUE, modify = FALSE, ignore = NULL, ...) {
+  LL(lwd, indention, roxygen.space, modify, comma, ops, parens, assign)
   roxygen.space <- paste(rep.int(" ", roxygen.space), collapse = "")
   roxygen.space <- sprintf("^#'%s", roxygen.space)
   check_fun <- function(x) {
@@ -477,11 +492,11 @@ check_R_code.character <- function(x, lwd = 80L, indention = 2L,
     }
     code_check <- function(x) {
       if (any(bad <- grepl("\t", x, fixed = TRUE)))
-        complain("tabs contained", bad)
+        complain("tab contained", bad)
+      x <- sub("^\\s+", "", x, perl = TRUE)
       if (any(bad <- grepl(";", x, fixed = TRUE)))
         complain("semicolon contained", bad)
-      if (any(bad <- grepl("  ", x = sub("^\\s+", "", x, perl = TRUE),
-          fixed = TRUE)))
+      if (any(bad <- grepl("  ", x, fixed = TRUE)))
         complain("space followed by space", bad)
       if (comma) {
         if (any(bad <- grepl(",[^\\s]", x, perl = TRUE)))
@@ -491,16 +506,20 @@ check_R_code.character <- function(x, lwd = 80L, indention = 2L,
       }
       if (ops) {
         if (any(bad <- grepl(OPS_LEFT, x, perl = TRUE)))
-          complain("operators not preceded by space", bad)
+          complain("operator not preceded by space", bad)
         if (any(bad <- grepl(OPS_RIGHT, x, perl = TRUE)))
-          complain("operators not followed by space", bad)
+          complain("operator not followed by space", bad)
       }
+      if (assign && any(bad <- grepl("(^|[^=<>!])=\\s*$", x, perl = TRUE)))
+        complain("line ends in single equals sign", bad)
       if (parens) {
         if (any(bad <- grepl("\\b(if|for|while)\\(", x, perl = TRUE)))
           complain("'if', 'for' or 'while' directly followed by parenthesis",
             bad)
         if (any(bad <- grepl("[([{]\\s", x, perl = TRUE)))
           complain("opening parenthesis or bracket followed by space", bad)
+        if (any(bad <- grepl("[^,]\\s+[)}\\]]", x, perl = TRUE)))
+          complain("closing parenthesis or bracket preceded by space", bad)
         if (any(bad <- grepl("[)\\]}][^\\s()[\\]}$:,;]", x, perl = TRUE)))
           complain(
             "closing parenthesis or bracket followed by wrong character", bad)
@@ -520,8 +539,8 @@ check_R_code.character <- function(x, lwd = 80L, indention = 2L,
     else
       NULL
   }
-  map_files(pkg_files(x = x, what = "R", installed = FALSE, ignore = ignore,
-    ...), check_fun)
+  invisible(map_files(pkg_files(x = x, what = "R", installed = FALSE,
+    ignore = ignore, ...), check_fun))
 }
 
 

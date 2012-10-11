@@ -13,9 +13,13 @@
 ################################################################################
 
 
+COLUMN_DEFAULT_NAME <- "Object"
+
+
 read_and_create_unique_names <- function(files, options) {
   data <- lapply(X = files, FUN = read.delim, sep = options$separator, 
-    check.names = options$names, strip.white = !options$keep)
+    check.names = options$names, strip.white = !options$keep,
+    header = !opt$bald)
   suffixes <- tools::file_path_sans_ext(basename(files), compression = TRUE)
   cn <- lapply(data, colnames)
   ok <- rep(list(options$ycolumn), length(data))
@@ -25,6 +29,19 @@ read_and_create_unique_names <- function(files, options) {
     colnames(data[[i]])[twice] <- sprintf("%s.%s", cn[[i]][twice], suffixes[i])
   }
   data
+}
+
+
+do_split <- function(x) {
+  x <- unlist(strsplit(x, ",", fixed = TRUE))
+  x[nzchar(x)]
+}
+
+
+to_numbered_header <- function(x) {
+  x[x == COLUMN_DEFAULT_NAME] <- "1"
+  x <- sub("^\\s*V", "", x, perl = TRUE, ignore.case = TRUE)
+  sprintf("V%i", pkgutils::must(as.integer(x)))
 }
 
 
@@ -40,9 +57,16 @@ option.parser <- optparse::OptionParser(option_list = list(
     help = "Keep non-matching lines of file 2, too [default: %default]", 
     default = FALSE),
 
-  optparse::make_option(c("-o", "--onename"), action = "store_true",
-    help = 
-      "Do not split arguments of '-x' and '-y' at ',' [default: %default]", 
+  optparse::make_option(c("-b", "--bald"), action = "store_true",
+    help = "Assume files have no headers [default: %default]",
+    default = FALSE),
+
+  optparse::make_option(c("-c", "--conserve"), action = "store_true",
+    help = "Conserve input column order, do not sort [default: %default]",
+    default = FALSE),
+
+  optparse::make_option(c("-d", "--delete"), action = "store_true",
+    help = "Delete non-matching lines of file 1 [default: %default]", 
     default = FALSE),
 
   optparse::make_option(c("-k", "--keep"), action = "store_true",
@@ -52,6 +76,10 @@ option.parser <- optparse::OptionParser(option_list = list(
   optparse::make_option(c("-n", "--names"), action = "store_true",
     help = "Convert column names to syntactical names [default: %default]",
     default = FALSE),
+
+  optparse::make_option(c("-o", "--onename"), action = "store_true",
+    help = paste("Do not split arguments of '-x' and '-y' at ','",
+      "[default: %default]"), default = FALSE),
 
   optparse::make_option(c("-s", "--separator"), type = "character",
     help = "Field separator in CSV files [default: '%default']",
@@ -63,7 +91,7 @@ option.parser <- optparse::OptionParser(option_list = list(
 
   optparse::make_option(c("-x", "--xcolumn"), type = "character",
     help = "Name of the merge column in file 1 [default: '%default']",
-    default = "Object", metavar = "COLUMN"),
+    default = COLUMN_DEFAULT_NAME, metavar = "COLUMN"),
 
   optparse::make_option(c("-y", "--ycolumn"), type = "character", 
     help = "Name of the merge column in file 2 [default: like file 1]",
@@ -75,21 +103,33 @@ option.parser <- optparse::OptionParser(option_list = list(
 opt <- optparse::parse_args(option.parser, positional_arguments = TRUE)
 files <- opt$args
 opt <- opt$options
+
+
+################################################################################
+#
+# special treatment of column-name options
+#
+
+if (opt$bald)
+  opt$onename <- FALSE
 if (!opt$onename)
-  opt$xcolumn <- unlist(strsplit(opt$xcolumn, ",", fixed = TRUE))
+  opt$xcolumn <- do_split(opt$xcolumn)
 if (!nzchar(opt$ycolumn)) {
   opt$ycolumn <- opt$xcolumn
 } else if (!opt$onename) {
-  opt$ycolumn <- unlist(strsplit(opt$ycolumn, ",", fixed = TRUE))
+  opt$ycolumn <- do_split(opt$ycolumn)
 }
+if (opt$bald) {
+  opt$xcolumn <- to_numbered_header(opt$xcolumn)
+  opt$ycolumn <- to_numbered_header(opt$ycolumn)
+}
+
 
 ################################################################################
 
 
-if (length(files) < 2L) {
-  message("\nmerge.R -- Merge CSV files based on specified columns.\n")
+if (opt$help || length(files) < 2L) {
   optparse::print_help(option.parser)
-  message("Note that non-matching lines of file 1 are always kept.\n")
   quit(status = 1L)
 }
 
@@ -99,7 +139,7 @@ data <- read_and_create_unique_names(files, opt)
 x <- data[[1]]
 for (i in seq_along(data)[-1L])
   x <- merge(x, data[[i]], by.x = opt$xcolumn, by.y = opt$ycolumn, 
-    all.x = TRUE, all.y = opt$all)
+    all.x = !opt$delete, all.y = opt$all, sort = !opt$conserve)
 
 write.table(x, sep = opt$separator, row.names = FALSE, quote = !opt$unquoted)
 

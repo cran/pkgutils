@@ -44,8 +44,8 @@
   \url{http://cran.r-project.org/bin/windows/Rtools/}.
 }
 \examples{
-# See the 'docu.R' script provided with this package, options '--check' and
-# '--install'.
+# See the 'docu.R' script provided with this package, options '--check',
+# '--install' and '--yes'.
 }
 \seealso{
   base::system

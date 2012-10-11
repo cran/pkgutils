@@ -105,7 +105,7 @@ stopifnot(identical(y, list(`1` = x[3], `2` = x[5:6])))
 
   Other auxiliary-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{logfile}},   \code{\link{map_files}},
+    \code{\link{listing}},       \code{\link{logfile}},   \code{\link{map_files}},
   \code{\link{must}},
   \code{\link{run_ruby}},     }
 \keyword{utilities}

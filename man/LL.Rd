@@ -39,8 +39,8 @@ stopifnot(x == c("letters", "LETTERS"))
   base::stop
 
   Other auxiliary-functions: \code{\link{L}},
-  \code{\link{case}},   \code{\link{logfile}},
-    \code{\link{map_files}},
+  \code{\link{case}},   \code{\link{listing}},
+        \code{\link{logfile}},   \code{\link{map_files}},
   \code{\link{must}},
   \code{\link{run_ruby}},     \code{\link{sections}},
     }

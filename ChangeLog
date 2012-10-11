@@ -1,4 +1,34 @@
 
+2012-10-12 (2nd release on CRAN)
+
+- novel listing() function (moved here from opm to pkgutils and made
+  generic)
+
+- novel max_rgb_contrast() function (moved here from opm to pkgutils and made
+  generic)
+
+- mypdf() made generic
+
+- improved documentation of paper_size() and logfile()
+
+- integrated 'check_code.R' into 'docu.R' script
+
+- expanded command-line arguments of 'docu.R' script
+
+- removed duplicate example dataset ("xyplot_docu" in addition to 
+  "xyplot.docu")
+
+- included check for '=' at end of line in check_R_code(), as well as
+  checks for closing parentheses or brackets preceded by space; result now 
+  returned invisibly (better for interactive checking)
+
+- problem messages from check_R_code() set to singular throughout
+
+- 'merge.R' gains options for dealing with files without headers, for
+  deleting non-matching columns of the first file, and for turning sorting
+  of columns off
+
+
 2012-09-23 (the initial release on CRAN)
 
 - well, put everything together

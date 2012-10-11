@@ -1,12 +1,16 @@
 \name{mypdf}
 \alias{mypdf}
+\alias{mypdf.character}
 \title{Create PDF file}
 \usage{
-  mypdf(file, paper = "a4r", prop = 0.9, ...)
+  mypdf(x, ...)
+
+  \method{mypdf}{character} (x, paper = "a4r", prop = 0.9,
+    ...)
 }
 \arguments{
-  \item{file}{See \code{pdf} from the \pkg{grDevices}
-  package.}
+  \item{x}{Passed as \sQuote{file} argument to \code{pdf}
+  from the \pkg{grDevices} package. See there for details.}
 
   \item{paper}{Character scalar like the eponymous argument
   of \code{pdf}, but here it is passed to
@@ -41,7 +45,8 @@
 \seealso{
   grDevices::pdf
 
-  Other plotting-functions: \code{\link{paper_size}},
+  Other plotting-functions: \code{\link{max_rgb_contrast}},
+    \code{\link{paper_size}},
     }
 \keyword{IO}
 

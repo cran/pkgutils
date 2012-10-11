@@ -189,7 +189,6 @@ repair_docu.Rd <- function(x, remove.dups = FALSE, ...) {
 NULL
 
 #' @rdname subset
-#' @aliases subset.Rd
 #' @method subset Rd
 #' @export
 #'
@@ -205,7 +204,6 @@ subset.Rd <- function(x, subset, values = FALSE, ...) {
 }
 
 #' @rdname subset
-#' @aliases subset.pack_desc
 #' @method subset pack_desc
 #' @export
 #'
@@ -228,7 +226,6 @@ subset.pack_desc <- function(x, ...) {
 }
 
 #' @rdname subset
-#' @aliases subset.pack_descs
 #' @method subset pack_descs
 #' @export
 #'

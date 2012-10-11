@@ -81,7 +81,7 @@ case.character <- function(EXPR, ...) {
 #' stopifnot(inherits(x, "try-error"))
 #'
 must <- function(expr, msg = NULL, ..., domain = NULL) {
-  # For some reason, using stop() directly resulted in errors that could not be
+  # For some reason, using stop() directly results in errors that cannot be
   # catched with tryCatch() any more.
   tryCatch(expr = expr, warning = function(w) stop(if (length(msg))
     msg
@@ -155,12 +155,152 @@ LL <- function(..., .wanted = 1L, .msg = "need object '%s' of length %i",
     if (!identical(length(item), .wanted))
       stop(sprintf(.msg, name, .wanted), call. = FALSE, domain = .domain)
     name
-  }, items, arg.names, SIMPLIFY = FALSE, USE.NAMES = FALSE))
+  }, items, arg.names, SIMPLIFY = TRUE, USE.NAMES = FALSE))
 }
 
 
 ################################################################################
 
+
+#' Nicer message listings
+#'
+#' Create some kind of listing, used, e.g., in (error) messages or warnings.
+#'
+#' @inheritParams pack_desc
+#' @param x For the default method, an object convertible via \code{unlist} to
+#'   a vector. In the default style mode, its \sQuote{names} attribute is used
+#'   as the first column of the resulting listing; if it is \code{NULL} or if
+#'   \code{force.numbers} is \code{TRUE}, numbers are inserted. The 
+#'   \sQuote{double} method is controlled by the \sQuote{digits} entry of
+#'   \code{options} from the \pkg{base} package.
+#' @param header \code{NULL} or character vector. Prepended to the result.
+#' @param footer \code{NULL} or character vector. Appended to the result.
+#' @param prepend Logical, numeric or character scalar. Prepended to each
+#'   line except \code{header} and \code{footer}. If numeric, the number of
+#'   spaces. \code{TRUE} causes tabs to be used, \code{FALSE} turns prepending
+#'   off. If in \sQuote{character} mode, used directly. The behaviour is 
+#'   distinct if \code{style} is \code{sentence}. In that case, a logical
+#'   scalar decides about whether names are prepended before joining the 
+#'   vector elements, and a character scalar is used as template for 
+#'   \code{sprintf}
+#' @param style Character scalar. If \sQuote{table} or \sQuote{list}, passed
+#'   to \code{formatDL}. If \sQuote{sentence}, a comma-separated list is
+#'   created from \code{x}, the last separator according to \code{last.sep}.
+#'   Otherwise, a template for \code{sprintf} is assumed taking two arguments,
+#'   the names of \code{x} and the values \code{x}.
+#' @param collapse Character scalar used to join the resulting vector elements.
+#'   Has no effect unless \code{header} or \code{footer} is given.
+#' @param force.numbers Logical scalar. Always use numbers instead of the
+#'   \sQuote{names} attribute?
+#' @param last.sep Character scalar indicating what should be used as last
+#'   separator if \code{style} is \sQuote{sentence}. Ignored unless the length
+#'   of \code{x} is at least 3.
+#' @param ... Optional other arguments passed to \code{formatDL}.
+#' @return Character scalar.
+#' @export
+#' @seealso base::message base::warning base::stop base::formatDL
+#' @family auxiliary-functions
+#' @keywords utilities
+#' @examples
+#'
+#' # default style
+#' x <- structure(letters[1:5], names = LETTERS[1:5])
+#' (y <- listing(x, "Five letters:", "...end here", 1))
+#' stopifnot(length(y) == 1, y ==
+#'   "Five letters:\n A: a\n B: b\n C: c\n D: d\n E: e\n...end here")
+#'
+#' # 'sentence' style
+#' (y <- listing(letters[1:3], style = "sentence", last.sep = "both"))
+#' stopifnot(y == "a, b, and c", length(y) == 1)
+#' (y <- listing(letters[1:3], style = "sentence", prepend = TRUE))
+#' stopifnot(y == "1: a, 2: b and 3: c", length(y) == 1)
+#' (y <- listing(letters[1:3], style = "sentence", prepend = "%s=>%s"))
+#' stopifnot(y == "1=>a, 2=>b and 3=>c", length(y) == 1)
+#'
+#' # with explicit sprintf template
+#' (y <- listing(x, style = "%s, %s", collapse = "; ", prepend = "!"))
+#' stopifnot(y == "!A, a; !B, b; !C, c; !D, d; !E, e", length(y) == 1)
+#'
+#' # other 'x' arguments
+#' stopifnot(listing(x) == listing(as.list(x)))
+#' stopifnot(listing(pi) == "1: 3.141593") # controlled by getOption("digits")
+#'
+listing <- function(x, ...) UseMethod("listing")
+
+#' @rdname listing
+#' @method listing double
+#' @export
+#'
+listing.double <- function(x, ...) {
+  x <- signif(x, getOption("digits"))
+  mode(x) <- "character"
+  listing(x = x, ...)
+}
+
+#' @rdname listing
+#' @method listing default
+#' @export
+#'
+listing.default <- function(x, ...) {
+  mode(x) <- "character"
+  listing(x = x, ...)
+}
+
+#' @rdname listing
+#' @method listing list
+#' @export
+#'
+listing.list <- function(x, ...) {
+  listing(x = unlist(x), ...)
+}
+
+#' @rdname listing
+#' @method listing character
+#' @export
+#'
+listing.character <- function(x, header = NULL, footer = NULL, prepend = FALSE,
+    style = "list", collapse = if (style == "sentence")
+      ""
+    else
+      "\n", force.numbers = FALSE, last.sep = c("and", "both", "comma"), ...) {
+  spaces <- function(x) {
+    if (is.character(x))
+      x
+    else if (is.numeric(x))
+      paste(rep.int(" ", prepend), collapse = "")
+    else if (x)
+      "\t"
+    else
+      ""
+  }
+  do_prepend <- function(x, prepend) paste(spaces(prepend), x, sep = "")
+  sentence <- function(x, last, prepend) {
+    if (is.character(prepend))
+      x <- sprintf(prepend, names(x), x)
+    else if (prepend)
+      x <- paste(names(x), x, sep = ": ")
+    case(n <- length(x),
+      stop("empty 'x' argument in 'sentence' mode"),
+      x,
+      paste(x, collapse = " and "),
+      paste(paste(x[-n], collapse = ", "), x[n],
+        sep = case(last, and = " and ", comma = ", ", both = ", and "))
+    )
+  }
+  LL(style, collapse, force.numbers, prepend)
+  if (is.null(names(x)) || force.numbers)
+    names(x) <- seq_along(x)
+  x <- if (style %in% c("table", "list"))
+    do_prepend(formatDL(x = x, style = style, ...), prepend)
+  else if (style == "sentence")
+    sentence(x, match.arg(last.sep), prepend)
+  else
+    do_prepend(sprintf(style, names(x), x), prepend)
+  paste(c(header, x, footer), collapse = collapse)
+}
+
+
+################################################################################
 
 
 #' Create sections
@@ -277,7 +417,6 @@ sections.logical <- function(x, include = TRUE, ...) {
   structure(as.ordered(result), .Names = names(x))
 }
 
-
 #' @rdname sections
 #' @method sections character
 #' @export
@@ -309,7 +448,8 @@ sections.character <- function(x, pattern, invert = FALSE, include = TRUE,
 #' @param x Character scalar for setting the logfile, or \code{NULL} for
 #'   getting the current value.
 #' @export
-#' @return Character scalar with the name of the current logfile.
+#' @return Character scalar with the name of the current logfile. Use an empty
+#'   string to turn logging off.
 #' @details Functions such as \code{\link{check_keywords}} print detected
 #'   problems, if any, using \code{message}. These character vectors can also
 #'   be safed by appending to a logfile.
@@ -339,7 +479,7 @@ logfile.NULL <- function(x) {
 #'
 logfile.character <- function(x) {
   old <- PKGUTILS_OPTIONS$logfile
-  PKGUTILS_OPTIONS$logfile <- L(stats::na.fail(x))
+  PKGUTILS_OPTIONS$logfile <- L(x[stats::complete.cases(x)])
   if (nzchar(x))
     tryCatch(cat(sprintf("\nLOGFILE RESET AT %s\n", date()), file = x,
       append = TRUE), error = function(e) {
@@ -376,6 +516,7 @@ logfile.character <- function(x) {
 #'   but needed not to be modified, and \code{NA} a filename that caused an
 #'   error. An attribute \sQuote{errors} is provided, containing a character
 #'   vector with error messages (empty strings if no error occurred).
+#' @seealso base::readLines
 #' @family auxiliary-functions
 #' @export
 #' @keywords IO
@@ -405,7 +546,7 @@ map_files.character <- function(x, mapfun, ..., .attr = ".filename",
       x
     }
     x <- readLines(con = filename, encoding = .encoding)
-    if (is.null(y <- mapfun(add_attr(x), ...)))
+    if (is.null(y <- mapfun(add_attr(x), ...))) # shortcut
       return(list(FALSE, ""))
     attributes(y) <- NULL
     if (identical(x, y))

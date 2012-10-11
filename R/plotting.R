@@ -1,5 +1,61 @@
 
 
+
+################################################################################
+
+
+#' Sort colours
+#'
+#' Arrange colours so as to achieve that neighboring colours are most distinct
+#' with respect to their RGB coordinates. This is done as follows: (1)
+#' Euclidean distances between the RGB coordinates of the input colours are
+#' calculated; (2) the distances are logarithmized and inversed; (3) a
+#' principal-coordinate analysis is conducted on these inversed distances; (4)
+#' the input colours are sorted according to the first principal coordinate.
+#'
+#' @inheritParams pack_desc
+#' @param x Vector. Names or hexadecimal codes of the colours to be sorted.
+#'   Might also be an integer vector, see \code{col2rgb} from the
+#'   \pkg{grDevices} package for details. Duplicate RGB coordinates and
+#'   unknown names will cause an error.
+#' @export
+#' @return Character vector (rearranged input names).
+#' @family plotting-functions
+#' @seealso grDevices::col2rgb
+#' @keywords color
+#' @note The resulting vector could as well be used in reverse order (see the
+#'   examples).
+#' @examples
+#'
+#' # with colours
+#' (x <- max_rgb_contrast(c("darkred", "darkblue", "blue", "red")))
+#' y <- c("darkblue", "red", "blue", "darkred")
+#' stopifnot(identical(x, y) || identical(x, rev(y)))
+#'
+#' # shades of grey 1
+#' (x <- max_rgb_contrast(c("white", "grey", "black")))
+#' y <- c("grey", "black", "white")
+#' stopifnot(identical(x, y) || identical(x, rev(y)))
+#'
+#' # shades of grey 2
+#' (x <- max_rgb_contrast(c("white", "darkgrey", "lightgrey", "black")))
+#' y <- c("lightgrey", "black", "white", "darkgrey")
+#' stopifnot(identical(x, y) || identical(x, rev(y)))
+#'
+max_rgb_contrast <- function(x, ...) UseMethod("max_rgb_contrast")
+
+#' @rdname max_rgb_contrast
+#' @method max_rgb_contrast default
+#' @export
+#'
+max_rgb_contrast.default <- function(x, ...) {
+  col.rgb <- t(grDevices::col2rgb(x))
+  rownames(col.rgb) <- x
+  pco <- stats::cmdscale(1 / log(dist(col.rgb)), k = 1L)
+  names(sort.int(pco[, 1L]))
+}
+
+
 ################################################################################
 
 
@@ -12,14 +68,14 @@
 #'   paper sizes in the \sQuote{DIN} series. If a character vector, the full
 #'   names of well-known paper formats such as \sQuote{a4}, \sQuote{letter},
 #'   etc.
-#' @param inches Logical scalar. If \code{TRUE}, output unit is inches,
-#'   otherwise millimeters.
-#' @param series Character scalar indicating the \sQuote{DIN} series to assume.
-#' @param landscape Logical vector. Where \code{FALSE}, \sQuote{portrait} paper
+#' @param landscape Logical scalar. If \code{FALSE}, \sQuote{portrait} paper
 #'   orientation is assumed. For the character method, this has only an effect
 #'   for paper size specifiers such as \sQuote{letter} that do not belong to
 #'   the \sQuote{DIN} series. For the \sQuote{DIN} series, append \sQuote{R} to
 #'   the specifier to obtain \sQuote{landscape} orientation.
+#' @param inches Logical scalar. If \code{TRUE}, output unit is inches,
+#'   otherwise millimeters.
+#' @param series Character scalar indicating the \sQuote{DIN} series to assume.
 #' @return Numeric matrix with columns \sQuote{width} and \sQuote{height} and
 #'   \code{x} as row names (if ot was a character vector).
 #' @details The computation is done numerically for the the DIN series, whereas
@@ -42,7 +98,7 @@ paper_size <- function(x, ...) UseMethod("paper_size")
 #' @method paper_size numeric
 #' @export
 #'
-paper_size.numeric <- function(x, series = c("A", "B", "C"), landscape = FALSE,
+paper_size.numeric <- function(x, landscape = FALSE, series = c("A", "B", "C"),
     ...) {
   pattern <- sprintf("%s%%i", match.arg(series))
   must(pattern[landscape] <- sprintf("%sR", pattern[landscape]))
@@ -53,7 +109,7 @@ paper_size.numeric <- function(x, series = c("A", "B", "C"), landscape = FALSE,
 #' @method paper_size character
 #' @export
 #'
-paper_size.character <- function(x, inches = FALSE, landscape = FALSE, ...) {
+paper_size.character <- function(x, landscape = FALSE, inches = FALSE, ...) {
   parse_din_string <- function(x) {
     get_orientation <- function(x) {
       x <- toupper(sub("^.*\\d", "", x, perl = TRUE))
@@ -106,7 +162,8 @@ paper_size.character <- function(x, inches = FALSE, landscape = FALSE, ...) {
 #' is that \code{mypdf} determines the width and the height of the plotting
 #' region from the paper format.
 #'
-#' @param file See \code{pdf} from the \pkg{grDevices} package.
+#' @param x Passed as \sQuote{file} argument to \code{pdf} from the 
+#'   \pkg{grDevices} package. See there for details.
 #' @param paper Character scalar like the eponymous argument of \code{pdf},
 #'   but here it is passed to \code{\link{paper_size}} to determine the
 #'   \sQuote{width} and the \sQuote{height} of the plotting region.
@@ -128,11 +185,17 @@ paper_size.character <- function(x, inches = FALSE, landscape = FALSE, ...) {
 #'   dev.off()
 #' }
 #'
-mypdf <- function(file, paper = "a4r", prop = 0.9, ...) {
+mypdf <- function(x, ...) UseMethod("mypdf")
+
+#' @rdname mypdf
+#' @method mypdf character
+#' @export
+#'
+mypdf.character <- function(x, paper = "a4r", prop = 0.9, ...) {
   paper.size <- paper_size(paper)
   width <- prop[1L] * paper.size[, "width"]
   height <- prop[length(prop)] * paper.size[, "height"]
-  pdf(file = file, paper = paper, width = width, height = height, ...)
+  pdf(file = x, paper = paper, width = width, height = height, ...)
 }
 
 

@@ -6,11 +6,11 @@
 \usage{
   paper_size(x, ...)
 
-  \method{paper_size}{numeric} (x,
-    series = c("A", "B", "C"), landscape = FALSE, ...)
+  \method{paper_size}{numeric} (x, landscape = FALSE,
+    series = c("A", "B", "C"), ...)
 
-  \method{paper_size}{character} (x, inches = FALSE,
-    landscape = FALSE, ...)
+  \method{paper_size}{character} (x, landscape = FALSE,
+    inches = FALSE, ...)
 }
 \arguments{
   \item{x}{Numeric or character vector. If a numeric
@@ -19,19 +19,19 @@
   well-known paper formats such as \sQuote{a4},
   \sQuote{letter}, etc.}
 
-  \item{inches}{Logical scalar. If \code{TRUE}, output unit
-  is inches, otherwise millimeters.}
-
-  \item{series}{Character scalar indicating the
-  \sQuote{DIN} series to assume.}
-
-  \item{landscape}{Logical vector. Where \code{FALSE},
+  \item{landscape}{Logical scalar. If \code{FALSE},
   \sQuote{portrait} paper orientation is assumed. For the
   character method, this has only an effect for paper size
   specifiers such as \sQuote{letter} that do not belong to
   the \sQuote{DIN} series. For the \sQuote{DIN} series,
   append \sQuote{R} to the specifier to obtain
   \sQuote{landscape} orientation.}
+
+  \item{inches}{Logical scalar. If \code{TRUE}, output unit
+  is inches, otherwise millimeters.}
+
+  \item{series}{Character scalar indicating the
+  \sQuote{DIN} series to assume.}
 
   \item{...}{Optional arguments passed to and from other
   methods, or between the methods.}
@@ -61,7 +61,7 @@ stopifnot(identical(y, x[1L, , drop = FALSE]))
   \url{http://en.wikipedia.org/wiki/Paper_size}
 }
 \seealso{
-  Other plotting-functions: \code{\link{mypdf}}
-}
+  Other plotting-functions: \code{\link{max_rgb_contrast}},
+    \code{\link{mypdf}}, }
 \keyword{dplot}
 

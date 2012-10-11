@@ -1,5 +1,17 @@
 
 
+pkgutils 0.2-0
+---------------
+
+New features:
+
+- novel listing() and max_rgb_contrast() functions
+
+- more checks in check_R_code()
+
+- more options for scripts docu.R and merge.R
+
+
 pkgutils 0.1-56
 ---------------
 

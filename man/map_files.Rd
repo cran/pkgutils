@@ -62,9 +62,11 @@ stopifnot(x == LETTERS)
 stopifnot(!x)
 }
 \seealso{
+  base::readLines
+
   Other auxiliary-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{logfile}},   \code{\link{must}},
+    \code{\link{listing}},       \code{\link{logfile}},   \code{\link{must}},
   \code{\link{run_ruby}},     \code{\link{sections}},
     }
 \keyword{IO}

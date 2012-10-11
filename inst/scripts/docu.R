@@ -28,104 +28,181 @@ for (lib in c("methods", "pkgutils", "roxygen2", "optparse"))
 ################################################################################
 
 
+do_check <- function(files, opt) {
+  y <- pkgutils::check_R_code(x = files, lwd = opt$width, ops = !opt$opsoff,
+    comma = !opt$commaoff, indention = opt$blank, roxygen.space = opt$jspaces,
+    modify = opt$modify, ignore = opt$good, parens = !opt$parensoff,
+    assign = !opt$assignoff)
+  if (any(y))
+    message(paste(sprintf("file '%s' has been modified", names(y)[y]),
+      collapse = "\n"))
+  y
+}
+
+
+do_split <- function(x, sep = ",") {
+  x <- unlist(strsplit(x, sep, fixed = TRUE))
+  x[nzchar(x)]
+}
+
+
+################################################################################
+
+
 option.parser <- OptionParser(option_list = list(
 
   make_option(c("-a", "--ancient"), action = "store_true", default = FALSE,
     help = "Do not update the DESCRIPTION file [default: %default]"),
 
+  make_option(c("-A", "--assignoff"), action = "store_true", default = FALSE,
+    help = "Ignore assignments when checking R style [default: %default]"),
+
   make_option(c("-b", "--blanks"), type = "integer", default = 2L,
     help = "Number of spaces per indention unit in R code [default: %default]",
     metavar = "NUMBER"),
 
+  # B
+
   make_option(c("-c", "--check"), action = "store_true", default = FALSE,
     help = "Run 'R CMD check' after documenting [default: %default]"),
+
+  make_option(c("-C", "--commaoff"), action = "store_true", default = FALSE,
+    help = "Ignore comma treatment when checking R style [default: %default]"),
 
   make_option(c("-d", "--delete"), type = "character", default = "",
     help = "Subdirectories to delete, colon-separated list [default: %default]",
     metavar = "LIST"),
 
+  # D
+
   make_option(c("-e", "--exec"), type = "character", default = "ruby",
     help = "Ruby executable used if -p or -s is chosen [default: %default]",
     metavar = "FILE"),
+
+  # E
 
   make_option(c("-f", "--format"), type = "character", default = "%Y-%m-%d",
     help = "Format of the date in the DESCRIPTION file [default: %default]",
     metavar = "STR"),
 
+  # F
+
   # A bug in Rscript causes '-g' to generate strange warning messages.
   # See https://stat.ethz.ch/pipermail/r-devel/2008-January/047944.html
   make_option(c("-g", "--good"), type = "character", default = "",
-    help = 
-      "R code files to not check, comma-separated list [default: %default]",
-    metavar = "LIST"),
+    help = paste("R code files to not check, comma-separated list",
+    "[default: %default]"), metavar = "LIST"),
+
+  # G
 
   # h is reserved for help!
+
+  # H
 
   make_option(c("-i", "--install"), action = "store_true", default = FALSE,
     help = "Also run 'R CMD INSTALL' after documenting [default: %default]"),
 
+  # I
+
   make_option(c("-j", "--jspaces"), type = "integer", default = 1L,
-    help = 
-      "Number of spaces starting Roxygen-style comments [default: %default]",
-    metavar = "NUMBER"),
+    help = paste("Number of spaces starting Roxygen-style comments",
+    "[default: %default]"), metavar = "NUMBER"),
+
+  # J
 
   make_option(c("-k", "--keep"), action = "store_true", default = FALSE,
     help = "Keep the version number in DESCRIPTION files [default: %default]"),
+
+  # K
 
   make_option(c("-l", "--logfile"), type = "character", default = "docu_%s.log",
     help = "Logfile to use for problem messages [default: %default]",
     metavar = "FILE"),
 
+  # L
+
   make_option(c("-m", "--modify"), action = "store_true", default = FALSE,
-    help =
-      "Potentially modify R sources when style checking [default: %default]"),
+    help = paste("Potentially modify R sources when style checking",
+    "[default: %default]")),
+
+  # M
 
   make_option(c("-n", "--nosudo"), action = "store_true", default = FALSE,
     help = "In conjunction with -i, do not use sudo [default: %default]"),
-  
+
+  # N
+
   make_option(c("-o", "--options"), type = "character", default = "as-cran",
     help = "'R CMD check' options, comma-separated list [default: %default]",
     metavar = "LIST"),
 
+  make_option(c("-O", "--opsoff"), action = "store_true", default = FALSE,
+    help = "Ignore operators when checking R style [default: %default]"),
+
   make_option(c("-p", "--preprocess"), action = "store_true", default = FALSE,
     help = "Preprocess R files using code swapping [default: %default]"),
+
+  make_option(c("-P", "--parensoff"), action = "store_true", default = FALSE,
+    help = "Ignore parentheses when checking R style [default: %default]"),
 
   make_option(c("-q", "--quick"), action = "store_true", default = FALSE,
     help = "Do not remove duplicate 'seealso' links [default: %default]"),
 
+  # Q
+
   make_option(c("-r", "--remove"), action = "store_true", default = FALSE,
     help = "First remove output directories if distinct [default: %default]"),
 
+  make_option(c("-R", "--Rcheck"), action = "store_true", default = FALSE,
+    help = "Check only format of R code, ignore packages [default: %default]"),
+
   make_option(c("-s", "--s4methods"), action = "store_true", default = FALSE,
     help = "Repair S4 method descriptions [default: %default]"),
+
+  # S
 
   make_option(c("-t", "--target"), type = "character",
     default = file.path(Sys.getenv("HOME"), "bin"),
     help = paste("For -i, script file target directory; ignored if",
       "empty [default: %default]"), metavar = "DIR"),
 
+  # T
+
   make_option(c("-u", "--unsafe"), action = "store_true", default = FALSE,
     help = "In conjunction with -i, omit checking [default: %default]"),
+
+  make_option(c("-U", "--untidy"), action = "store_true", default = FALSE,
+    help = "Omit R style checking altogether [default: %default]"),
 
   make_option(c("-v", "--verbatim"), action = "store_true", default = FALSE,
     help = paste("No special processing of package names ending in '*_in'",
       "[default: %default]")),
 
+  # V
+
   make_option(c("-w", "--width"), type = "integer", default = 80L,
     help = "Maximum allowed line width in R code [default: %default]",
     metavar = "NUMBER"),
+
+  # W
 
   make_option(c("-x", "--exclude"), type = "character", default = "",
     help = paste("Files to ignore when using -t, comma-separated list",
       "[default: %default]"), metavar = "LIST"),
 
+  # X
+
   make_option(c("-y", "--yes"), action = "store_true", default = FALSE,
     help = "Yes, also build the package [default: %default]"),
+
+  # Y
 
   make_option(c("-z", "--zapoff"), action = "store_true", default = FALSE,
     help = "Do not zap object files in 'src', if any [default: %default]")
 
-))
+  # Z
+
+), usage = "%prog [options] [directories/files]")
 
 
 opt <- parse_args(option.parser, positional_arguments = TRUE)
@@ -133,19 +210,28 @@ package.dirs <- opt$args
 opt <- opt$options
 
 
-if (opt$help) {
+if (opt$help || (opt$Rcheck && !length(package.dirs))) {
   print_help(option.parser)
   quit(status = 1L)
 }
 
 
-opt$options <- unlist(strsplit(opt$options, ",", fixed = TRUE))
-opt$delete <- unlist(strsplit(opt$delete, ":", fixed = TRUE))
-opt$good <- basename(unlist(strsplit(opt$good, ",", fixed = TRUE)))
-opt$exclude <- unlist(strsplit(opt$exclude, ",", fixed = TRUE))
+opt$options <- do_split(opt$options)
+opt$delete <- do_split(opt$delete, ":")
+opt$good <- basename(do_split(opt$good))
+opt$exclude <- do_split(opt$exclude)
 
 
 ################################################################################
+
+
+if (opt$Rcheck) {
+  quit(status = length(which(is.na(do_check(package.dirs, opt)))))
+}
+
+
+################################################################################
+
 
 
 if (length(package.dirs)) {
@@ -221,13 +307,10 @@ for (i in seq_along(package.dirs)) {
 
   message(sprintf("Logfile is now '%s'", pkgutils::logfile(logfiles[i])))
 
-  message("Checking R code of", msg)
-  tmp <- pkgutils::check_R_code(out.dir, lwd = opt$width,
-    indention = opt$blank, roxygen.space = opt$jspaces, modify = opt$modify,
-    ignore = opt$good)
-  errs <- errs + length(which(is.na(tmp)))
-  if (any(tmp))
-    message(paste("Modifying file", names(tmp)[tmp], collapse = "\n"))
+  if (!opt$untidy) {
+    message("Checking R code of", msg)
+    errs <- errs + length(which(is.na(do_check(out.dir, opt))))
+  }
 
   message("Creating documentation for", msg)
   roxygen2::roxygenize(out.dir)

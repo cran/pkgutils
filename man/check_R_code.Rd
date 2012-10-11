@@ -7,8 +7,8 @@
 
   \method{check_R_code}{character} (x, lwd = 80L,
     indention = 2L, roxygen.space = 1L, comma = TRUE,
-    ops = TRUE, parens = TRUE, modify = FALSE,
-    ignore = NULL, ...)
+    ops = TRUE, parens = TRUE, assign = TRUE,
+    modify = FALSE, ignore = NULL, ...)
 }
 \arguments{
   \item{lwd}{Numeric scalar. Maximum line width allowed.
@@ -35,7 +35,11 @@
   followed by parentheses, that opening parentheses (and
   brackets) are not followed by a space, and that closing
   parentheses (and brackets) are followed by appropriate
-  characters only.}
+  characters only and are not preceded by a space.}
+
+  \item{assign}{Logical scalar indicating that it should be
+  checked that there is no linebreak within named
+  function-argument assignments.}
 
   \item{modify}{Logical scalar indicating whether the
   source code should be modified (non-destructively, of
@@ -59,9 +63,10 @@
 }
 \value{
   Logical vector; see \code{\link{map_files}} for details.
-  As a side effect, problem messages are printed to
-  \code{stderr}. See \code{\link{logfile}} for how to send
-  these messages to a file.
+  Here the result is returned invisibly. As a side effect,
+  problem messages are printed to \code{stderr}. See
+  \code{\link{logfile}} for how to send these messages to a
+  file.
 }
 \description{
   Check certain aspects of the format of \R code files in
@@ -78,8 +83,19 @@
   good coding style.
 }
 \examples{
-# See the 'docu.R' script provided with this package, options '--blank',
-# '--jspaces' and '--width'.
+# Checking the R scripts that come with the package
+(scripts <- pkg_files("pkgutils", "scripts"))
+if (length(scripts)) {
+  result <- check_R_code(scripts) # should not yield any messages
+  stopifnot(is.logical(result), names(result) == names(scripts))
+} else {
+  warning("scripts not found")
+}
+
+# See also the 'docu.R' script provided with this package, options
+# '--blank', '--jspaces', '--width', '--assignoff', '--commaoff',
+# '--opsoff', '--modify', '--good', '--parensoff', '--Rcheck' and
+# '--untidy'. Checking can be turned off generally or specifically.
 }
 \seealso{
   Other package-functions: \code{\link{copy_pkg_files}},
