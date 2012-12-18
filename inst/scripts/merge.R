@@ -19,7 +19,8 @@ COLUMN_DEFAULT_NAME <- "Object"
 read_and_create_unique_names <- function(files, options) {
   data <- lapply(X = files, FUN = read.delim, sep = options$separator, 
     check.names = options$names, strip.white = !options$keep,
-    header = !opt$bald)
+    header = !opt$bald, stringsAsFactors = FALSE,
+    fileEncoding = options$encoding)
   suffixes <- tools::file_path_sans_ext(basename(files), compression = TRUE)
   cn <- lapply(data, colnames)
   ok <- rep(list(options$ycolumn), length(data))
@@ -68,6 +69,10 @@ option.parser <- optparse::OptionParser(option_list = list(
   optparse::make_option(c("-d", "--delete"), action = "store_true",
     help = "Delete non-matching lines of file 1 [default: %default]", 
     default = FALSE),
+
+  optparse::make_option(c("-e", "--encoding"), type = "character",
+    help = "Encoding to be assumed in input files [default: '%default']",
+    metavar = "NAME", default = ""),
 
   optparse::make_option(c("-k", "--keep"), action = "store_true",
     help = "Keep whitespace surrounding the separators [default: %default]", 
@@ -136,10 +141,20 @@ if (opt$help || length(files) < 2L) {
 
 data <- read_and_create_unique_names(files, opt)
 
-x <- data[[1]]
+x <- data[[1L]]
 for (i in seq_along(data)[-1L])
   x <- merge(x, data[[i]], by.x = opt$xcolumn, by.y = opt$ycolumn, 
     all.x = !opt$delete, all.y = opt$all, sort = !opt$conserve)
+
+if (opt$conserve) {
+  previous <- data[[1L]][, opt$xcolumn]
+  if (setequal(previous, x[, opt$xcolumn])) {
+    rownames(x) <- x[, opt$xcolumn]
+    x <- x[previous, , drop = FALSE]
+    rownames(x) <- NULL
+  }
+}
+
 
 write.table(x, sep = opt$separator, row.names = FALSE, quote = !opt$unquoted)
 

@@ -9,9 +9,9 @@ pkg <- "pkgutils"
 ################################################################################
 
 
-mustbe <- function(x, y) stopifnot(identical(x, y))
+must_be <- function(x, y) stopifnot(identical(x, y))
 
-mustfail <- function(expr) {
+must_fail <- function(expr) {
   stopifnot(inherits(try(expr, silent = TRUE), "try-error"))
 }
 
@@ -21,10 +21,12 @@ mustfail <- function(expr) {
 # Use the package's own functionality to see what's there
 #
 
-stopifnot(length(x <- pkg_files(pkg, "scripts")) == 3L)
+must_be(length(x <- pkg_files(pkg, "scripts")), 2L)
 stopifnot(!check_R_code(x))
-stopifnot(length(pkg_files(pkg, "highlighting")) == 2L)
-stopifnot(length(pkg_files(pkg, "auxiliary")) == 2L)
+
+must_be(length(pkg_files(pkg, "highlighting")), 2L)
+
+must_be(length(pkg_files(pkg, "auxiliary")), 2L)
 
 
 ################################################################################
@@ -40,15 +42,15 @@ stopifnot(nrow(data(package = pkg)$results) == 1L)
 # Tests for case()
 #
 
-mustbe(case(0, "a", "b"), "a")
-mustbe(case(1, "a", "b"), "b")
-mustbe(case(10, "a", "b"), "b")
-mustfail(case(NA_real_, "a", "b"))
-mustfail(case(-1, "a", "b"))
-mustbe(case("a", a = "a", b = "b"), "a")
-mustbe(case("b", a = "a", b = "b"), "b")
-mustfail(case("c", a = "a", b = "b"))
-mustfail(case(NA_character_, a = "a", b = "b"))
+must_be(case(0, "a", "b"), "a")
+must_be(case(1, "a", "b"), "b")
+must_be(case(10, "a", "b"), "b")
+must_fail(case(NA_real_, "a", "b"))
+must_fail(case(-1, "a", "b"))
+must_be(case("a", a = "a", b = "b"), "a")
+must_be(case("b", a = "a", b = "b"), "b")
+must_fail(case("c", a = "a", b = "b"))
+must_fail(case(NA_character_, a = "a", b = "b"))
 
 
 ################################################################################
@@ -59,12 +61,12 @@ mustfail(case(NA_character_, a = "a", b = "b"))
 x <- 3
 y <- 9:10
 z <- 'a'
-mustbe(c("x", "z"), LL(x, z))
-mustfail(LL(x, y))
-mustfail(LL(x, y, .wanted = 2L))
-mustfail(LL(y, z, .wanted = 2L))
-mustbe("y", LL(y, .wanted = 2L))
-mustfail(must(warning("abc")))
+must_be(c("x", "z"), LL(x, z))
+must_fail(LL(x, y))
+must_fail(LL(x, y, .wanted = 2L))
+must_fail(LL(y, z, .wanted = 2L))
+must_be("y", LL(y, .wanted = 2L))
+must_fail(must(warning("abc")))
 
 
 

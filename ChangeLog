@@ -1,4 +1,48 @@
 
+2012-12-19 (3rd release on CRAN)
+
+- more robust approach in check_keywords() to find the KEYWORDS.db file (bug
+  submitted by Benjamin Hofner)
+
+- pack_desc() now requires all dependencies in 'source' mode
+
+- list method of flatten() moved from opm package to pkgutils
+
+- pack_desc() gets an 'envir' argument
+
+- check_R_code() gets new 'encoding', 'what' and 'accept.tabs' arguments and
+  a check for the usage of ':::'
+
+- the 'style' argument of listing() can now be also set to 'm4' or 'M4'
+
+- pkg_files() now uses 'winslash = "/"' in 'installed = TRUE' mode
+
+- 'docu.R' now also checks test files and scripts if located within
+  inst/scripts, inst/tests, scripts or tests
+  
+- 'docu.R' now also copies hidden files (such as '.Rbuildignore') if requested
+
+- 'docu.R' now updates the DESCRIPTION of an input directory, too, if it is 
+  distinct from the output directory
+
+- the '-g' argument of 'docu.R' is replaced by '-G' to omit Rscript's buggy
+  warning message; the '--s4methods' argument is renamed to '--S4methods'
+
+- 'docu.R' gets new switches '-B'/'--buildopts', '-I'/'--installopts',
+  '-F'/'--folder', '-E'/'--encoding', '-T'/'--tabs' and '-S'/'--Sweave'; the
+  'sweave.R' script is removed accordingly
+
+- in 'docu.R', the default behaviour of '-y'/'--yes' is changed (restored by
+  applying '-F'/'--folder')
+
+- 'merge.R' now better preserves input row order (if requested)
+
+- 'merge.R' gets a '-e'/'--encoding' argument
+
+- syntax highlighting for gedit now matches dollar operators followed or
+  preceded by backquoted names
+
+
 2012-10-12 (2nd release on CRAN)
 
 - novel listing() function (moved here from opm to pkgutils and made

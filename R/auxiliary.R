@@ -170,7 +170,7 @@ LL <- function(..., .wanted = 1L, .msg = "need object '%s' of length %i",
 #' @param x For the default method, an object convertible via \code{unlist} to
 #'   a vector. In the default style mode, its \sQuote{names} attribute is used
 #'   as the first column of the resulting listing; if it is \code{NULL} or if
-#'   \code{force.numbers} is \code{TRUE}, numbers are inserted. The 
+#'   \code{force.numbers} is \code{TRUE}, numbers are inserted. The
 #'   \sQuote{double} method is controlled by the \sQuote{digits} entry of
 #'   \code{options} from the \pkg{base} package.
 #' @param header \code{NULL} or character vector. Prepended to the result.
@@ -178,16 +178,20 @@ LL <- function(..., .wanted = 1L, .msg = "need object '%s' of length %i",
 #' @param prepend Logical, numeric or character scalar. Prepended to each
 #'   line except \code{header} and \code{footer}. If numeric, the number of
 #'   spaces. \code{TRUE} causes tabs to be used, \code{FALSE} turns prepending
-#'   off. If in \sQuote{character} mode, used directly. The behaviour is 
+#'   off. If in \sQuote{character} mode, used directly. The behaviour is
 #'   distinct if \code{style} is \code{sentence}. In that case, a logical
-#'   scalar decides about whether names are prepended before joining the 
-#'   vector elements, and a character scalar is used as template for 
+#'   scalar decides about whether names are prepended before joining the
+#'   vector elements, and a character scalar is used as template for
 #'   \code{sprintf}
 #' @param style Character scalar. If \sQuote{table} or \sQuote{list}, passed
 #'   to \code{formatDL}. If \sQuote{sentence}, a comma-separated list is
 #'   created from \code{x}, the last separator according to \code{last.sep}.
 #'   Otherwise, a template for \code{sprintf} is assumed taking two arguments,
-#'   the names of \code{x} and the values \code{x}.
+#'   the names of \code{x} and the values \code{x}. If \sQuote{m4} or
+#'   \sQuote{M4} , \acronym{GNU} \command{m4} macro definitions using double or
+#'   single quoting, respectively, for the expansions are created. A warning is
+#'   issued if the macro strings are invalid, which is always the case of
+#'   \code{x} has no names; \code{prepend} is ignored.
 #' @param collapse Character scalar used to join the resulting vector elements.
 #'   Has no effect unless \code{header} or \code{footer} is given.
 #' @param force.numbers Logical scalar. Always use numbers instead of the
@@ -220,6 +224,10 @@ LL <- function(..., .wanted = 1L, .msg = "need object '%s' of length %i",
 #' # with explicit sprintf template
 #' (y <- listing(x, style = "%s, %s", collapse = "; ", prepend = "!"))
 #' stopifnot(y == "!A, a; !B, b; !C, c; !D, d; !E, e", length(y) == 1)
+#'
+#' # create m4 macro definitions
+#' (y <- listing(x, style = "m4"))
+#' stopifnot(grepl("^(define\\([^)]+\\)dnl\n?)+$", y), length(y) == 1)
 #'
 #' # other 'x' arguments
 #' stopifnot(listing(x) == listing(as.list(x)))
@@ -263,6 +271,7 @@ listing.character <- function(x, header = NULL, footer = NULL, prepend = FALSE,
       ""
     else
       "\n", force.numbers = FALSE, last.sep = c("and", "both", "comma"), ...) {
+
   spaces <- function(x) {
     if (is.character(x))
       x
@@ -273,7 +282,9 @@ listing.character <- function(x, header = NULL, footer = NULL, prepend = FALSE,
     else
       ""
   }
+
   do_prepend <- function(x, prepend) paste(spaces(prepend), x, sep = "")
+
   sentence <- function(x, last, prepend) {
     if (is.character(prepend))
       x <- sprintf(prepend, names(x), x)
@@ -287,16 +298,70 @@ listing.character <- function(x, header = NULL, footer = NULL, prepend = FALSE,
         sep = case(last, and = " and ", comma = ", ", both = ", and "))
     )
   }
+
+  to_m4 <- function(x, single) {
+    is_macro <- function(x) grepl("^[A-Za-z_]\\w*$", x, perl = TRUE)
+    do_quote <- function(x, single) {
+      x <- chartr("`", "'", x)
+      if (single)
+        sprintf("`%s'", gsub("'", "''`", x, fixed = TRUE))
+      else
+        sprintf("``%s''", gsub("'", "'''``", x, fixed = TRUE))
+    }
+    if (any(bad <- !is_macro(y <- names(x))))
+      warning(sprintf("not a valid m4 macro string: '%s'", y[bad][1L]))
+    sprintf("define(%s, %s)dnl", do_quote(y, TRUE), do_quote(x, single))
+  }
+
   LL(style, collapse, force.numbers, prepend)
   if (is.null(names(x)) || force.numbers)
     names(x) <- seq_along(x)
-  x <- if (style %in% c("table", "list"))
-    do_prepend(formatDL(x = x, style = style, ...), prepend)
-  else if (style == "sentence")
-    sentence(x, match.arg(last.sep), prepend)
-  else
+  x <- switch(style,
+    table =,
+    list = do_prepend(formatDL(x = x, style = style, ...), prepend),
+    sentence = sentence(x, match.arg(last.sep), prepend),
+    m4 = to_m4(x, FALSE),
+    M4 = to_m4(x, TRUE),
     do_prepend(sprintf(style, names(x), x), prepend)
+  )
   paste(c(header, x, footer), collapse = collapse)
+}
+
+
+################################################################################
+
+
+#' Flatten a list
+#'
+#' Create a non-nested list.
+#'
+#' @param object List.
+#' @inheritParams pack_desc
+#' @export
+#' @return A list.
+#' @family auxiliary-functions
+#' @note The method is based on 
+#'   \url{http://stackoverflow.com/questions/8139677/} with some slight
+#'   improvements.
+#' @keywords manip
+#' @examples
+#' x <- list(a = list(b = 1:5, c = letters[1:5]), d = LETTERS[1:3],
+#'   e = list(pi))
+#' (y <- flatten(x))
+#' stopifnot(is.list(y), length(y) == 4, !sapply(y, is.list))
+#'
+flatten <- function(object, ...) UseMethod("flatten")
+
+#' @rdname flatten
+#' @method flatten list
+#' @export
+#'
+flatten.list <- function(object, ...) {
+  while (any(is.a.list <- vapply(object, is.list, logical(1L)))) {
+    object[!is.a.list] <- lapply(object[!is.a.list], list)
+    object <- unlist(object, recursive = FALSE)
+  }
+  object
 }
 
 
@@ -306,7 +371,7 @@ listing.character <- function(x, header = NULL, footer = NULL, prepend = FALSE,
 #' Create sections
 #'
 #' The \sQuote{logical} method treats a logical vector by regarding \code{TRUE}
-#' as indicating separation. It creates a factor that could be used with 
+#' as indicating separation. It creates a factor that could be used with
 #' \code{split} to split the logical vector, or any equal-length object from
 #' which it was created, into according groups. The \sQuote{character} method
 #' splits a character vector according to a pattern or to a given output
@@ -317,10 +382,11 @@ listing.character <- function(x, header = NULL, footer = NULL, prepend = FALSE,
 #' @param include Logical scalar indicating whether the separator positions
 #'   should also be included in the factor levels instead of being coded as
 #'   \code{NA}.
-#' @param pattern Scalar. If of mode \sQuote{character}, passed to 
-#'   \code{grepl}. If numeric, used to indicate the lengths of the substrings
-#'   to extract.
+#' @param pattern Scalar. If of mode \sQuote{character}, passed to
+#'   \code{grepl} from the \pkg{base} package. If numeric, used to indicate the
+#'   lengths of the substrings to extract.
 #' @param invert Negate the results of \code{grepl}?
+#' @param perl Logical scalar passed to \code{grepl}.
 #' @return The \sQuote{logical} method returns an
 #'   ordered factor, its length being the one of \code{x}. The levels
 #'   correspond to a groups whose indices correspond to the index of a
@@ -331,7 +397,7 @@ listing.character <- function(x, header = NULL, footer = NULL, prepend = FALSE,
 #'   factor levels will usually be removed. Thus note the action of the
 #'   \code{include} argument, and note that the positions of \code{TRUE} values
 #'   that are followed by other \code{TRUE} values are always set to \code{NA},
-#'   irrespective of \code{include}. The \sQuote{character} method using a 
+#'   irrespective of \code{include}. The \sQuote{character} method using a
 #'   pattern works by passing this pattern to \code{grepl}, the result to
 #'   the \sQuote{logical} method and this in turn to \code{split}.
 #'
@@ -347,21 +413,21 @@ listing.character <- function(x, header = NULL, footer = NULL, prepend = FALSE,
 #' x <- c(TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE)
 #' (y <- sections(x))
 #' stopifnot(identical(as.ordered(c(1, 1, 1, 2, 2, 3, 3)), y))
-#' 
+#'
 #' # now exclude the separators
 #' y <- sections(x, include = FALSE)
 #' stopifnot(identical(as.ordered(c(NA, 1, 1, NA, 2, NA, 3)), y))
-#' 
+#'
 #' # leading FALSE
 #' x <- c(FALSE, x)
 #' (y <- sections(x))
 #' stopifnot(identical(as.ordered(c(1, 2, 2, 2, 3, 3, 4, 4)), y))
-#' 
+#'
 #' # adjacent TRUEs and trailing TRUE
 #' x <- c(FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE)
 #' (y <- sections(x))
 #' stopifnot(identical(as.ordered(c(1, NA, 2, 2, 3, 3, NA, 4, 4, 5)), y))
-#' 
+#'
 #' # several adjacent TRUEs
 #' x <- c(FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE)
 #' (y <- sections(x))
@@ -422,9 +488,9 @@ sections.logical <- function(x, include = TRUE, ...) {
 #' @export
 #'
 sections.character <- function(x, pattern, invert = FALSE, include = TRUE,
-    ...) {
+    perl = TRUE, ...) {
   if (is.character(pattern)) {
-    y <- grepl(pattern = pattern, x = x, ...)
+    y <- grepl(pattern = pattern, x = x, perl = perl, ...)
     if (L(invert))
       y <- !y
     split.default(x = x, f = sections(x = y, include = include))
@@ -539,13 +605,15 @@ map_files <- function(x, ...) UseMethod("map_files")
 #' @export
 #'
 map_files.character <- function(x, mapfun, ..., .attr = ".filename",
-    .encoding = "unknown") {
+    .encoding = "") {
   doit <- function(filename) tryCatch({
     add_attr <- function(x) {
       attr(x, .attr) <- filename
       x
     }
-    x <- readLines(con = filename, encoding = .encoding)
+    connection <- file(description = filename, encoding = .encoding)
+    x <- readLines(con = connection)
+    close(connection)
     if (is.null(y <- mapfun(add_attr(x), ...))) # shortcut
       return(list(FALSE, ""))
     attributes(y) <- NULL
@@ -817,7 +885,7 @@ problem.character <- function(x, infile = NULL, line = NULL, ...) {
 #'   \sQuote{pack_desc} or \sQuote{pack_descs}.
 #' @param demo Logical scalar. See \code{\link{pack_desc}}.
 #' @param ... Optional additional arguments passed between the methods and
-#'   finally to \code{source}.
+#'   finally to \code{sys.source}.
 #' @return List of lists with the results of calling \code{source}. For the
 #'   action of the \sQuote{pack_desc} or \sQuote{pack_descs} methods, see
 #'   \code{\link{pack_desc}}.
@@ -845,7 +913,7 @@ source_files <- function(x, ...) UseMethod("source_files")
 #' @export
 #'
 source_files.character <- function(x, ...) {
-  doit <- function(file) source(file = file, ...)
+  doit <- function(file) sys.source(file = file, ...)
   invisible(sapply(x, doit, simplify = FALSE))
 }
 
@@ -867,8 +935,8 @@ source_files.pack_desc <- function(x, demo = FALSE, ...) {
     r.files = file.path(dirname(attr(x, "filename")), "R", y$Collate))
   if (L(demo))
     return(y)
-  for (e in unlist(y[c("Depends", "Imports")]))
-    require(e, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)
+  for (p in unlist(y[c("depends", "imports")]))
+    require(p, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)
   invisible(source_files(x = y$r.files, ...))
 }
 

@@ -39,7 +39,7 @@ stopifnot(old == logfile())
 \seealso{
   Other auxiliary-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{listing}},       \code{\link{map_files}},
+    \code{\link{flatten}},   \code{\link{listing}},       \code{\link{map_files}},
   \code{\link{must}},
   \code{\link{run_ruby}},     \code{\link{sections}},
     }

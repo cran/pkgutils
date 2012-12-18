@@ -8,7 +8,8 @@
   \method{check_R_code}{character} (x, lwd = 80L,
     indention = 2L, roxygen.space = 1L, comma = TRUE,
     ops = TRUE, parens = TRUE, assign = TRUE,
-    modify = FALSE, ignore = NULL, ...)
+    modify = FALSE, ignore = NULL, accept.tabs = FALSE,
+    what = "R", encoding = "", ...)
 }
 \arguments{
   \item{lwd}{Numeric scalar. Maximum line width allowed.
@@ -45,7 +46,19 @@
   source code should be modified (non-destructively, of
   course) and input files overwritten (if changes were
   possible). The modifications currently only comprise the
-  removal of whitespace from the ends of the lines.}
+  removal of whitespace from the ends of the lines and
+  optionally the replacement of each tabulator by
+  \code{indention} numbers of spaces (see also the next
+  argument).}
+
+  \item{accept.tabs}{Logical scalar indicating whether
+  tabulators are accepted.}
+
+  \item{what}{Character vector naming the subdirectories to
+  consider; passed to \code{\link{pkg_files}}}
+
+  \item{encoding}{Character scalar passed as
+  \sQuote{.encoding} argument to \code{\link{map_files}}.}
 
   \item{...}{Optional arguments passed to
   \code{\link{pkg_files}}.}
@@ -80,7 +93,12 @@
   binary as well as unary operators and should either be
   followed by spaces or not, respectively. Yielding no
   problem messages is thus just a minimum requirement for a
-  good coding style.
+  good coding style. For instance, indentation checking
+  does \strong{not} check whether continuation lines have
+  the correct number of leading spaces. Rather, checks are
+  made line-per-line throughout. In addition to such false
+  negatives, \code{check_R_code} falsely complains about
+  numbers in exponential notation.
 }
 \examples{
 # Checking the R scripts that come with the package
@@ -94,7 +112,7 @@ if (length(scripts)) {
 
 # See also the 'docu.R' script provided with this package, options
 # '--blank', '--jspaces', '--width', '--assignoff', '--commaoff',
-# '--opsoff', '--modify', '--good', '--parensoff', '--Rcheck' and
+# '--opsoff', '--modify', '--good', '--parensoff', '--Rcheck', '--tabs' and
 # '--untidy'. Checking can be turned off generally or specifically.
 }
 \seealso{

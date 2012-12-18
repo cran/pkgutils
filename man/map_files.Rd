@@ -6,7 +6,7 @@
   map_files(x, ...)
 
   \method{map_files}{character} (x, mapfun, ...,
-    .attr = ".filename", .encoding = "unknown")
+    .attr = ".filename", .encoding = "")
 }
 \arguments{
   \item{x}{Character vector of input (and potentially
@@ -66,7 +66,7 @@ stopifnot(!x)
 
   Other auxiliary-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{listing}},       \code{\link{logfile}},   \code{\link{must}},
+    \code{\link{flatten}},   \code{\link{listing}},       \code{\link{logfile}},   \code{\link{must}},
   \code{\link{run_ruby}},     \code{\link{sections}},
     }
 \keyword{IO}

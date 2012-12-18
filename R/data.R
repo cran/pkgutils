@@ -3,7 +3,7 @@
 #' Example RD dataset: xyplot() documentation
 #'
 #' This \sQuote{Rd} object contains the description in \sQuote{Rd} format of
-#' the function \code{xyplot} from the \pkg{lattice} package, version 
+#' the function \code{xyplot} from the \pkg{lattice} package, version
 #' 0.20-10.
 #'
 #' @docType data

@@ -53,7 +53,12 @@
   \code{x}, the last separator according to
   \code{last.sep}.  Otherwise, a template for
   \code{sprintf} is assumed taking two arguments, the names
-  of \code{x} and the values \code{x}.}
+  of \code{x} and the values \code{x}. If \sQuote{m4} or
+  \sQuote{M4} , \acronym{GNU} \command{m4} macro
+  definitions using double or single quoting, respectively,
+  for the expansions are created. A warning is issued if
+  the macro strings are invalid, which is always the case
+  of \code{x} has no names; \code{prepend} is ignored.}
 
   \item{collapse}{Character scalar used to join the
   resulting vector elements.  Has no effect unless
@@ -96,6 +101,10 @@ stopifnot(y == "1=>a, 2=>b and 3=>c", length(y) == 1)
 (y <- listing(x, style = "\%s, \%s", collapse = "; ", prepend = "!"))
 stopifnot(y == "!A, a; !B, b; !C, c; !D, d; !E, e", length(y) == 1)
 
+# create m4 macro definitions
+(y <- listing(x, style = "m4"))
+stopifnot(grepl("^(define\\\([^)]+\\\)dnl\n?)+$", y), length(y) == 1)
+
 # other 'x' arguments
 stopifnot(listing(x) == listing(as.list(x)))
 stopifnot(listing(pi) == "1: 3.141593") # controlled by getOption("digits")
@@ -105,7 +114,7 @@ stopifnot(listing(pi) == "1: 3.141593") # controlled by getOption("digits")
 
   Other auxiliary-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{logfile}},   \code{\link{map_files}},
+    \code{\link{flatten}},   \code{\link{logfile}},   \code{\link{map_files}},
   \code{\link{must}},
   \code{\link{run_ruby}},     \code{\link{sections}},
     }

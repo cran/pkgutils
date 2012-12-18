@@ -162,7 +162,7 @@ paper_size.character <- function(x, landscape = FALSE, inches = FALSE, ...) {
 #' is that \code{mypdf} determines the width and the height of the plotting
 #' region from the paper format.
 #'
-#' @param x Passed as \sQuote{file} argument to \code{pdf} from the 
+#' @param x Passed as \sQuote{file} argument to \code{pdf} from the
 #'   \pkg{grDevices} package. See there for details.
 #' @param paper Character scalar like the eponymous argument of \code{pdf},
 #'   but here it is passed to \code{\link{paper_size}} to determine the

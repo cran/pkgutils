@@ -7,7 +7,8 @@
 
   \method{pack_desc}{character} (pkg,
     action = c("read", "update", "source"), version = TRUE,
-    demo = FALSE, date.format = "\%Y-\%m-\%d", ...)
+    demo = FALSE, date.format = "\%Y-\%m-\%d",
+    envir = globalenv(), ...)
 }
 \arguments{
   \item{pkg}{Name(s) of one to several package directories.
@@ -31,6 +32,9 @@
 
   \item{date.format}{Character scalar. The format used and
   expected for the date of the package.}
+
+  \item{envir}{Environment used when sourceing files. Only
+  relevant if \code{action} is set to \sQuote{source}.}
 
   \item{...}{Optional arguments passed to and from other
   methods, or between the methods.}

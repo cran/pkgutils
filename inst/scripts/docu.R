@@ -21,22 +21,54 @@
 ################################################################################
 
 
-for (lib in c("methods", "pkgutils", "roxygen2", "optparse"))
+for (lib in c("utils", "methods", "pkgutils", "roxygen2", "optparse"))
   library(lib, quietly = TRUE, warn.conflicts = FALSE, character.only = TRUE)
 
 
 ################################################################################
 
 
-do_check <- function(files, opt) {
-  y <- pkgutils::check_R_code(x = files, lwd = opt$width, ops = !opt$opsoff,
+copy_dir <- function(from, to) {
+  LL(from, to)
+  unlink(to, recursive = TRUE)
+  if (!dir.create(to, recursive = TRUE))
+    stop(sprintf("failed to create directory '%s'", to))
+  files <- list.files(from, recursive = FALSE, full.names = TRUE,
+    all.files = TRUE)
+  files <- files[!basename(files) %in% c(".", "..")]
+  file.copy(files, to, recursive = TRUE)
+}
+
+
+do_style_check <- function(files, opt) {
+  subdirs <- c("tests", "scripts")
+  subdirs <- c("R", subdirs, file.path("inst", subdirs))
+  y <- check_R_code(x = files, lwd = opt$width, ops = !opt$opsoff,
     comma = !opt$commaoff, indention = opt$blank, roxygen.space = opt$jspaces,
     modify = opt$modify, ignore = opt$good, parens = !opt$parensoff,
-    assign = !opt$assignoff)
-  if (any(y))
-    message(paste(sprintf("file '%s' has been modified", names(y)[y]),
+    assign = !opt$assignoff, accept.tabs = opt$tabs, what = subdirs,
+    encoding = opt$encoding)
+  isna <- is.na(y)
+  if (any(y & !isna))
+    message(paste(sprintf("file '%s' has been modified", names(y)[y & !isna]),
       collapse = "\n"))
-  y
+  if (any(isna))
+    message(paste(sprintf("checking file '%s' resulted in an error",
+      names(y)[isna]), collapse = "\n"))
+  length(which(isna))
+}
+
+
+run_sweave <- function(files, opt) {
+  sum(vapply(files, function(file) {
+    tryCatch({
+      Sweave(file = file, encoding = opt$encoding)
+      0L
+    }, error = function(e) {
+      warning(e)
+      1L
+    })
+  }, integer(1L)))
 }
 
 
@@ -61,7 +93,9 @@ option.parser <- OptionParser(option_list = list(
     help = "Number of spaces per indention unit in R code [default: %default]",
     metavar = "NUMBER"),
 
-  # B
+  make_option(c("-B", "--buildopts"), type = "character", default = "",
+    help = "'R CMD build' options, comma-separated list [default: %default]",
+    metavar = "LIST"),
 
   make_option(c("-c", "--check"), action = "store_true", default = FALSE,
     help = "Run 'R CMD check' after documenting [default: %default]"),
@@ -79,21 +113,26 @@ option.parser <- OptionParser(option_list = list(
     help = "Ruby executable used if -p or -s is chosen [default: %default]",
     metavar = "FILE"),
 
-  # E
+  make_option(c("-E", "--encoding"), type = "character", default = "",
+    help = "Character encoding assumed in input files [default: %default]",
+    metavar = "ENC"),
 
   make_option(c("-f", "--format"), type = "character", default = "%Y-%m-%d",
     help = "Format of the date in the DESCRIPTION file [default: %default]",
     metavar = "STR"),
 
-  # F
+  make_option(c("-F", "--folder"), action = "store_true", default = FALSE,
+    help = paste("When using -y, check and install not the archive but the",
+      "folder [default: %default]")),
 
   # A bug in Rscript causes '-g' to generate strange warning messages.
   # See https://stat.ethz.ch/pipermail/r-devel/2008-January/047944.html
-  make_option(c("-g", "--good"), type = "character", default = "",
+  #
+  # g
+
+  make_option(c("-G", "--good"), type = "character", default = "",
     help = paste("R code files to not check, comma-separated list",
     "[default: %default]"), metavar = "LIST"),
-
-  # G
 
   # h is reserved for help!
 
@@ -102,7 +141,9 @@ option.parser <- OptionParser(option_list = list(
   make_option(c("-i", "--install"), action = "store_true", default = FALSE,
     help = "Also run 'R CMD INSTALL' after documenting [default: %default]"),
 
-  # I
+  make_option(c("-I", "--installopts"), type = "character", default = "",
+    help = "'R CMD INSTALL' options, comma-separated list [default: %default]",
+    metavar = "LIST"),
 
   make_option(c("-j", "--jspaces"), type = "integer", default = 1L,
     help = paste("Number of spaces starting Roxygen-style comments",
@@ -156,17 +197,19 @@ option.parser <- OptionParser(option_list = list(
   make_option(c("-R", "--Rcheck"), action = "store_true", default = FALSE,
     help = "Check only format of R code, ignore packages [default: %default]"),
 
-  make_option(c("-s", "--s4methods"), action = "store_true", default = FALSE,
+  make_option(c("-s", "--S4methods"), action = "store_true", default = FALSE,
     help = "Repair S4 method descriptions [default: %default]"),
 
-  # S
+  make_option(c("-S", "--Sweave"), action = "store_true", default = FALSE,
+    help = "Run Sweave on input files, ignore packages [default: %default]"),
 
   make_option(c("-t", "--target"), type = "character",
     default = file.path(Sys.getenv("HOME"), "bin"),
     help = paste("For -i, script file target directory; ignored if",
       "empty [default: %default]"), metavar = "DIR"),
 
-  # T
+  make_option(c("-T", "--tabs"), action = "store_true", default = FALSE,
+    help = "Accept tabs when checking R style [default: %default]"),
 
   make_option(c("-u", "--unsafe"), action = "store_true", default = FALSE,
     help = "In conjunction with -i, omit checking [default: %default]"),
@@ -217,6 +260,8 @@ if (opt$help || (opt$Rcheck && !length(package.dirs))) {
 
 
 opt$options <- do_split(opt$options)
+opt$installopts <- do_split(opt$installopts)
+opt$buildopts <- do_split(opt$buildopts)
 opt$delete <- do_split(opt$delete, ":")
 opt$good <- basename(do_split(opt$good))
 opt$exclude <- do_split(opt$exclude)
@@ -225,8 +270,16 @@ opt$exclude <- do_split(opt$exclude)
 ################################################################################
 
 
-if (opt$Rcheck) {
-  quit(status = length(which(is.na(do_check(package.dirs, opt)))))
+if (opt$Sweave) { # Sweave running mode
+  quit(status = run_sweave(package.dirs, opt))
+}
+
+
+################################################################################
+
+
+if (opt$Rcheck) { # R style check only
+  quit(status = do_style_check(package.dirs, opt))
 }
 
 
@@ -235,17 +288,18 @@ if (opt$Rcheck) {
 
 
 if (length(package.dirs)) {
-  if (length(bad <- package.dirs[!pkgutils::is_pkg_dir(package.dirs)]))
+  if (length(bad <- package.dirs[!is_pkg_dir(package.dirs)]))
     stop("not a package directory: ", bad[1L])
 } else {
   package.dirs <- list.files()
-  package.dirs <- package.dirs[pkgutils::is_pkg_dir(package.dirs)]
+  package.dirs <- package.dirs[is_pkg_dir(package.dirs)]
   if (!length(package.dirs)) {
     warning("no package directories provided, and none found in ", getwd(),
       "\nuse command-line switches '--help' or '-h' for help")
     quit(status = 1L)
   }
 }
+
 
 if (opt$verbatim) {
   out.dirs <- package.dirs
@@ -263,6 +317,7 @@ if (opt$verbatim) {
 }
 
 msgs <- sprintf(" package directory '%s'...", out.dirs)
+msgs.1 <- sprintf(" input directory '%s'...", package.dirs)
 
 logfiles <- if (nzchar(opt$logfile)) {
   file.path(dirname(out.dirs), sprintf(opt$logfile, basename(out.dirs)))
@@ -277,7 +332,7 @@ errs <- 0L
 ################################################################################
 
 
-if (nzchar(opt$target) && !utils::file_test("-d", opt$target)) {
+if (nzchar(opt$target) && !file_test("-d", opt$target)) {
   warning(sprintf("'%s' is not a directory", opt$target))
   opt$target <- ""
   errs <- errs + 1L
@@ -290,73 +345,82 @@ for (i in seq_along(package.dirs)) {
   in.dir <- package.dirs[i]
   msg <- msgs[i]
 
+  if (!opt$ancient) {
+    # This must be applied to the input directory if it is distinct from the
+    # output directory.
+    message("Updating DESCRIPTION of", msgs.1[i])
+    tmp <- pack_desc(in.dir, "update", version = !opt$keep,
+      date.format = opt$format)
+    message(paste(formatDL(tmp[1L, ], style = "list"), collapse = "\n"))
+  }
+
   if (!identical(out.dir, in.dir)) {
     # Copying the files is preferred to calling roxygenize() with two
     # directory arguments because due to a Roxygen2 bug this would result in
     # duplicated documentation for certain S4 methods.
     message(sprintf("Copying '%s' to '%s'...", in.dir, out.dir))
-    unlink(out.dir, recursive = TRUE)
-    dir.create(out.dir) &&
-      file.copy(list.files(in.dir, recursive = FALSE, full.names = TRUE),
-        out.dir, recursive = TRUE)
+    copy_dir(in.dir, out.dir)
     if (length(opt$delete)) {
       message("Deleting specified subdirectories (if present) of", msg)
       unlink(file.path(out.dir, opt$delete), recursive = TRUE)
     }
   }
 
-  message(sprintf("Logfile is now '%s'", pkgutils::logfile(logfiles[i])))
+  message(sprintf("Logfile is now '%s'", logfile(logfiles[i])))
 
   if (!opt$untidy) {
     message("Checking R code of", msg)
-    errs <- errs + length(which(is.na(do_check(out.dir, opt))))
+    errs <- errs + do_style_check(out.dir, opt)
   }
 
   message("Creating documentation for", msg)
-  roxygen2::roxygenize(out.dir)
+  roxygenize(out.dir)
 
   message("Repairing documentation for", msg)
-  pkgutils::repair_docu(out.dir, remove.dups = !opt$quick)
+  repair_docu(out.dir, remove.dups = !opt$quick)
 
-  if (opt$s4methods) {
+  if (opt$S4methods) {
     message("Repairing S4 method documentation for", msg)
-    errs <- errs + pkgutils::repair_S4_docu(out.dir, ruby = opt$exec)
+    errs <- errs + repair_S4_docu(out.dir, ruby = opt$exec)
   }
 
   if (suppressWarnings(file.remove(file.path(out.dir, "inst"))))
     message("Deleting empty 'inst' subdirectory of", msg)
 
-  if (!opt$ancient) {
-    message("Updating DESCRIPTION of", msg)
-    tmp <- pkgutils::pack_desc(out.dir, "update", version = !opt$keep,
-      date.format = opt$format)
-    message(paste(formatDL(tmp[1L, ], style = "list"), collapse = "\n"))
-  }
-
   if (opt$preprocess) {
     message("Preprocessing R code of", msg)
-    errs <- errs + pkgutils::swap_code(out.dir, ruby = opt$exec)
+    errs <- errs + swap_code(out.dir, ruby = opt$exec)
+  }
+
+  if (!opt$zapoff) {
+    message("Deleting object files (if any) of", msg)
+    errs <- errs + !all(delete_o_files(out.dir))
+  }
+
+  pkg.file <- out.dir
+
+  if (opt$yes) {
+    message("Building", msg)
+    build.err <- run_R_CMD(out.dir, "build", opt$buildopts)
+    errs <- errs + build.err
+    if (!opt$folder) {
+      pkg.file <- sprintf("%s_%s.tar.gz", out.dir,
+        pack_desc(out.dir)[[1L]][, "Version"])
+      msg <- sprintf(" archive file '%s'...", pkg.file)
+    }
   }
 
   if (opt$check || ((opt$install || opt$yes) && !opt$unsafe)) {
-    if (!opt$zapoff) {
-      message("Deleting object files (if any) of", msg)
-      errs <- errs + !all(delete_o_files(out.dir))
-    }
     message("Checking", msg)
-    errs <- errs + (check.result <- run_R_CMD(out.dir, "check", opt$options))
+    errs <- errs + (check.err <- run_R_CMD(pkg.file, "check", opt$options))
   }
 
-  if (opt$yes && (opt$unsafe || identical(check.result, 0L))) {
-    message("Building", msg)
-    errs <- errs + run_R_CMD(out.dir, "build")
-  }
-
-  if (opt$install && (opt$unsafe || identical(check.result, 0L))) {
+  if (opt$install && (opt$unsafe || !check.err)) {
     message("Installing", msg)
-    errs <- errs +
-      (installed <- run_R_CMD(out.dir, "INSTALL", sudo = !opt$nosudo))
-    if (identical(installed, 0L) && nzchar(opt$target)) {
+    install.err <- run_R_CMD(out.dir, "INSTALL", opt$installopts,
+      sudo = !opt$nosudo)
+    errs <- errs + install.err
+    if (!install.err && nzchar(opt$target)) {
       message("Copying script files (if any)...")
       errs <- errs + !all(copy_pkg_files(x = basename(out.dir),
         to = opt$target, ignore = opt$exclude))
@@ -367,5 +431,8 @@ for (i in seq_along(package.dirs)) {
 
 
 quit(status = errs)
+
+
+################################################################################
 
 

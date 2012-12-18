@@ -65,7 +65,7 @@
   appropriate keywords.
 }
 \examples{
-# Character data
+# Character data, or zero arguments
 (x <- check_keywords())
 stopifnot(length(x) > 1, is.character(x), is.null(names(x)))
 (x <- check_keywords(c("aplot", "loess")))

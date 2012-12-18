@@ -51,7 +51,7 @@ pkg <- find.package(c("tools", "utils"), quiet = TRUE)
 stopifnot(is.character(x), length(x) == 6)
 }
 \seealso{
-  base::list.files base::find.package
+  base::list.files base::find.package base::system.file
 
   Other package-functions: \code{\link{check_R_code}},
     \code{\link{copy_pkg_files}},

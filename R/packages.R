@@ -25,6 +25,8 @@
 #'   description of the result?
 #' @param date.format Character scalar. The format used and expected for the
 #'   date of the package.
+#' @param envir Environment used when sourceing files. Only relevant if
+#'   \code{action} is set to \sQuote{source}.
 #' @param ... Optional arguments passed to and from other methods, or between
 #'   the methods.
 #' @export
@@ -78,7 +80,8 @@ pack_desc <- function(pkg, ...) UseMethod("pack_desc")
 #' @export
 #'
 pack_desc.character <- function(pkg, action = c("read", "update", "source"),
-    version = TRUE, demo = FALSE, date.format = "%Y-%m-%d", ...) {
+    version = TRUE, demo = FALSE, date.format = "%Y-%m-%d",
+    envir = globalenv(), ...) {
   LL(version, demo, date.format)
   x <- lapply(normalizePath(file.path(pkg, "DESCRIPTION")), function(file) {
     structure(.Data = read.dcf(file), class = "pack_desc", filename = file)
@@ -96,7 +99,7 @@ pack_desc.character <- function(pkg, action = c("read", "update", "source"),
         wanted <- c(wanted, "Version")
       do.call(rbind, sapply(x, function(y) y[1L, wanted], simplify = FALSE))
     },
-    source = source_files(x = x, demo = demo, ...)
+    source = source_files(x = x, demo = demo, envir = envir, ...)
   )
 }
 
@@ -114,7 +117,7 @@ pack_desc.character <- function(pkg, action = c("read", "update", "source"),
 #'   of the working directory.
 #' @param what Character scalar. The name of the subcommand of \sQuote{R CMD}.
 #' @param ... Optional command-line switches passed to \sQuote{R CMD <what>}.
-#'   In contrast to \code{x}, leading dashes are automatically prepended as 
+#'   In contrast to \code{x}, leading dashes are automatically prepended as
 #'   necessary.
 #' @param sudo Logical scalar. Prepend \sQuote{sudo} to the command? Probably
 #'   makes only sense on UNIX-like systems.
@@ -179,7 +182,7 @@ run_R_CMD.character <- function(x, what = "check", ...,
 #' @return Character vector of file names. Empty if no such files are found.
 #' @family package-functions
 #' @keywords package
-#' @seealso base::list.files base::find.package
+#' @seealso base::list.files base::find.package base::system.file
 #' @examples
 #' pkg <- find.package(c("tools", "utils"), quiet = TRUE)
 #' (x <- pkg_files(pkg, "R"))
@@ -203,7 +206,7 @@ pkg_files.character <- function(x, what, installed = TRUE, ignore = NULL,
     if (!length(result))
       return(character())
     result <- list.files(path = file.path(result, what), full.names = TRUE, ...)
-    normalizePath(filter(result))
+    normalizePath(filter(result), winslash = "/")
   } else if (any(is.pack.dir <- is_pkg_dir(x))) {
     result <- as.list(x)
     result[is.pack.dir] <- lapply(x[is.pack.dir], function(name) {
@@ -226,7 +229,7 @@ pkg_files.character <- function(x, what, installed = TRUE, ignore = NULL,
 #' @inheritParams pkg_files
 #' @param what Character vector with the names of subdirectories to copy.
 #' @param to Character vector indicating the target folder(s) or file(s).
-#' @param overwrite Logical scalar passed to \code{file.copy} from the 
+#' @param overwrite Logical scalar passed to \code{file.copy} from the
 #'   \pkg{base} package (in addition to \code{from} and \code{to}).
 #' @param ... Optional arguments passed to the same function.
 #' @export
@@ -435,7 +438,15 @@ delete_o_files.character <- function(x, ext = "o", ignore = NULL, ...) {
 #' @param modify Logical scalar indicating whether the source code should be
 #'   modified (non-destructively, of course) and input files overwritten (if
 #'   changes were possible). The modifications currently only comprise the
-#'   removal of whitespace from the ends of the lines.
+#'   removal of whitespace from the ends of the lines and optionally the
+#'   replacement of each tabulator by \code{indention} numbers of spaces (see
+#'   also the next argument).
+#' @param accept.tabs Logical scalar indicating whether tabulators are
+#'   accepted.
+#' @param what Character vector naming the subdirectories to consider; passed
+#'   to \code{\link{pkg_files}}
+#' @param encoding Character scalar passed as \sQuote{.encoding} argument to
+#'   \code{\link{map_files}}.
 #' @param ... Optional arguments passed to \code{\link{pkg_files}}.
 #' @return Logical vector; see \code{\link{map_files}} for details. Here
 #'   the result is returned invisibly. As a side
@@ -445,7 +456,12 @@ delete_o_files.character <- function(x, ext = "o", ignore = NULL, ...) {
 #'   coding style. Not all problems can be checked, however. For instance,
 #'   \code{+} and \code{-} are binary as well as unary operators and should
 #'   either be followed by spaces or not, respectively. Yielding no problem
-#'   messages is thus just a minimum requirement for a good coding style.
+#'   messages is thus just a minimum requirement for a good coding style. For
+#'   instance, indentation checking does \strong{not} check whether
+#'   continuation lines have the correct number of leading spaces. Rather,
+#'   checks are made line-per-line throughout. In addition to such false
+#'   negatives, \code{check_R_code} falsely complains about numbers in
+#'   exponential notation.
 #' @keywords package
 #' @family package-functions
 #' @export
@@ -462,7 +478,7 @@ delete_o_files.character <- function(x, ext = "o", ignore = NULL, ...) {
 #'
 #' # See also the 'docu.R' script provided with this package, options
 #' # '--blank', '--jspaces', '--width', '--assignoff', '--commaoff',
-#' # '--opsoff', '--modify', '--good', '--parensoff', '--Rcheck' and
+#' # '--opsoff', '--modify', '--good', '--parensoff', '--Rcheck', '--tabs' and
 #' # '--untidy'. Checking can be turned off generally or specifically.
 #'
 check_R_code <- function(x, ...) UseMethod("check_R_code")
@@ -473,10 +489,12 @@ check_R_code <- function(x, ...) UseMethod("check_R_code")
 #'
 check_R_code.character <- function(x, lwd = 80L, indention = 2L,
     roxygen.space = 1L, comma = TRUE, ops = TRUE, parens = TRUE,
-    assign = TRUE, modify = FALSE, ignore = NULL, ...) {
-  LL(lwd, indention, roxygen.space, modify, comma, ops, parens, assign)
-  roxygen.space <- paste(rep.int(" ", roxygen.space), collapse = "")
-  roxygen.space <- sprintf("^#'%s", roxygen.space)
+    assign = TRUE, modify = FALSE, ignore = NULL, accept.tabs = FALSE,
+    what = "R", encoding = "", ...) {
+  spaces <- function(n) paste(rep.int(" ", n), collapse = "")
+  LL(lwd, indention, roxygen.space, modify, comma, ops, parens, assign,
+    accept.tabs)
+  roxygen.space <- sprintf("^#'%s", spaces(roxygen.space))
   check_fun <- function(x) {
     infile <- attr(x, ".filename")
     complain <- function(text, is.bad) {
@@ -491,13 +509,13 @@ check_R_code.character <- function(x, lwd = 80L, indention = 2L,
       sub(QUOTED_BEGIN, "QUOTED", x, perl = TRUE)
     }
     code_check <- function(x) {
-      if (any(bad <- grepl("\t", x, fixed = TRUE)))
-        complain("tab contained", bad)
       x <- sub("^\\s+", "", x, perl = TRUE)
       if (any(bad <- grepl(";", x, fixed = TRUE)))
         complain("semicolon contained", bad)
       if (any(bad <- grepl("  ", x, fixed = TRUE)))
         complain("space followed by space", bad)
+      if (any(bad <- grepl(":::", x, fixed = TRUE)))
+        complain("':::' operator used", bad)
       if (comma) {
         if (any(bad <- grepl(",[^\\s]", x, perl = TRUE)))
           complain("comma not followed by space", bad)
@@ -525,8 +543,11 @@ check_R_code.character <- function(x, lwd = 80L, indention = 2L,
             "closing parenthesis or bracket followed by wrong character", bad)
       }
     }
-    if (modify)
+    if (modify) {
       x <- sub("\\s+$", "", x, perl = TRUE)
+      x <- gsub("\t", spaces(indention), x, fixed = TRUE)
+    } else if (any(bad <- grepl("\t", x, fixed = TRUE)) && !accept.tabs)
+      complain("tab contained", bad)
     if (any(bad <- nchar(x) > lwd))
       complain(sprintf("line longer than %i", lwd), bad)
     if (any(bad <- bad_ind(sub(roxygen.space, "", x, perl = TRUE), indention)))
@@ -539,8 +560,8 @@ check_R_code.character <- function(x, lwd = 80L, indention = 2L,
     else
       NULL
   }
-  invisible(map_files(pkg_files(x = x, what = "R", installed = FALSE,
-    ignore = ignore, ...), check_fun))
+  invisible(map_files(pkg_files(x = x, what = what, installed = FALSE,
+    ignore = ignore, ...), check_fun, .encoding = encoding))
 }
 
 

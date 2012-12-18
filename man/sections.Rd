@@ -9,7 +9,7 @@
   \method{sections}{logical} (x, include = TRUE, ...)
 
   \method{sections}{character} (x, pattern, invert = FALSE,
-    include = TRUE, ...)
+    include = TRUE, perl = TRUE, ...)
 }
 \arguments{
   \item{x}{Logical vector. It is an error if \code{NA}
@@ -20,10 +20,13 @@
   levels instead of being coded as \code{NA}.}
 
   \item{pattern}{Scalar. If of mode \sQuote{character},
-  passed to \code{grepl}. If numeric, used to indicate the
-  lengths of the substrings to extract.}
+  passed to \code{grepl} from the \pkg{base} package. If
+  numeric, used to indicate the lengths of the substrings
+  to extract.}
 
   \item{invert}{Negate the results of \code{grepl}?}
+
+  \item{perl}{Logical scalar passed to \code{grepl}.}
 
   \item{...}{Optional arguments passed to and from other
   methods, or between the methods.}
@@ -105,7 +108,7 @@ stopifnot(identical(y, list(`1` = x[3], `2` = x[5:6])))
 
   Other auxiliary-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{listing}},       \code{\link{logfile}},   \code{\link{map_files}},
+    \code{\link{flatten}},   \code{\link{listing}},       \code{\link{logfile}},   \code{\link{map_files}},
   \code{\link{must}},
   \code{\link{run_ruby}},     }
 \keyword{utilities}

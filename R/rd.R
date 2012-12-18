@@ -272,7 +272,7 @@ subset.pack_descs <- function(x, ...) {
 #' @keywords package
 #' @examples
 #'
-#' # Character data
+#' # Character data, or zero arguments
 #' (x <- check_keywords())
 #' stopifnot(length(x) > 1, is.character(x), is.null(names(x)))
 #' (x <- check_keywords(c("aplot", "loess")))
@@ -290,7 +290,7 @@ check_keywords <- function(x, ...) UseMethod("check_keywords")
 #' @export
 #'
 check_keywords.NULL <- function(x, full = FALSE, ...) {
-  x <- readLines(file.path(R.home(), "doc", "KEYWORDS.db"))
+  x <- readLines(file.path(R.home("doc"), "KEYWORDS.db"))
   x <- grep("|", x, fixed = TRUE, value = TRUE)
   x <- sub("^.*\\|", "", x, perl = TRUE)
   x <- do.call(rbind, strsplit(x, "\\s*:\\s*", perl = TRUE))

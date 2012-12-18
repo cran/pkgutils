@@ -20,7 +20,7 @@
   \item{demo}{Logical scalar. See \code{\link{pack_desc}}.}
 
   \item{...}{Optional additional arguments passed between
-  the methods and finally to \code{source}.}
+  the methods and finally to \code{sys.source}.}
 }
 \value{
   List of lists with the results of calling \code{source}.
