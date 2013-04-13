@@ -70,9 +70,9 @@
 pkg <- find.package(c("tools", "utils"), quiet = TRUE)
 
 # Reading
-(x <- pack_desc(pkg, "read"))
+(x <- pack_desc(pkg, "read")) # should look similar to packageVersion()
 stopifnot(is.list(x), names(x) == pkg, inherits(x, "pack_descs"))
-stopifnot(sapply(x, is.character), sapply(x, inherits, what = "pack_desc"))
+stopifnot(sapply(x, is.list), sapply(x, inherits, what = "pack_desc"))
 
 # Updating (in demo mode, of course)
 (x <- pack_desc(pkg, "update", demo = TRUE, date.format = "\%Y/\%m/\%d"))
@@ -91,6 +91,8 @@ stopifnot(sapply(x, names) == c("depends", "imports", "r.files"))
 }
 \seealso{
   base::read.dcf base::write.dcf base::source
+
+  utils::packageDescription
 
   Other package-functions: \code{\link{check_R_code}},
     \code{\link{copy_pkg_files}},

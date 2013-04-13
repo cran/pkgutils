@@ -9,7 +9,7 @@
     indention = 2L, roxygen.space = 1L, comma = TRUE,
     ops = TRUE, parens = TRUE, assign = TRUE,
     modify = FALSE, ignore = NULL, accept.tabs = FALSE,
-    what = "R", encoding = "", ...)
+    three.dots = TRUE, what = "R", encoding = "", ...)
 }
 \arguments{
   \item{lwd}{Numeric scalar. Maximum line width allowed.
@@ -53,6 +53,9 @@
 
   \item{accept.tabs}{Logical scalar indicating whether
   tabulators are accepted.}
+
+  \item{three.dots}{Logical scalar indicating whether
+  \code{:::} operators should result in a warning.}
 
   \item{what}{Character vector naming the subdirectories to
   consider; passed to \code{\link{pkg_files}}}

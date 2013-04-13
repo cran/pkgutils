@@ -3,14 +3,15 @@
 \alias{mypdf.character}
 \title{Create PDF file}
 \usage{
-  mypdf(x, ...)
+  mypdf(file, ...)
 
-  \method{mypdf}{character} (x, paper = "a4r", prop = 0.9,
-    ...)
+  \method{mypdf}{character} (file, paper = "a4r",
+    prop = 0.9, ...)
 }
 \arguments{
-  \item{x}{Passed as \sQuote{file} argument to \code{pdf}
-  from the \pkg{grDevices} package. See there for details.}
+  \item{file}{Passed as \sQuote{file} argument to
+  \code{pdf} from the \pkg{grDevices} package. See there
+  for details.}
 
   \item{paper}{Character scalar like the eponymous argument
   of \code{pdf}, but here it is passed to

@@ -1,3 +1,30 @@
+pkgutils 0.4-0
+---------------
+
+Bug fixes:
+
+- fixed bug in check_R_code()
+
+- fixed bug in 'repair_S4_docu.rb' script
+
+- fixed bug in 'merge.R' script
+
+- fixed bug in syntax highlighting for gedit
+
+Significant user-visible changes:
+
+- the first argument of mypdf() was renamed
+
+New features:
+
+- 'merge.R' now deals with empty column names
+
+- sourceing files with pack_desc() now suppresses package startup messages
+
+- check_R_code() and the 'docu.R' make checking for ':::' optional
+
+- listing() is extended in several ways
+
 
 pkgutils 0.3-0
 ---------------

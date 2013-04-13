@@ -31,9 +31,9 @@ rd_quote <- function(x, ...) UseMethod("rd_quote")
 #' @export
 #'
 rd_quote.character <- function(x, text, ...) {
-  text <- tools::toRd(na.fail(text))
+  text <- toRd(na.fail(text))
   x <- x[nzchar(na.fail(x))]
-  if (length(bad <- x[x != tools::toRd(x)]))
+  if (length(bad <- x[x != toRd(x)]))
     stop(sprintf("command name '%s' contains special characters", bad[1L]))
   for (item in rev(x))
     text <- sprintf("\\%s{%s}", item, text)
@@ -75,7 +75,7 @@ repair_docu <- function(x, ...) UseMethod("repair_docu")
 #'
 repair_docu.character <- function(x, ignore = NULL, ...) {
   do_repair <- function(x) {
-    data <- repair_docu(tools::parse_Rd(file = x), ...)
+    data <- repair_docu(parse_Rd(file = x), ...)
     check_keywords(data, file = x, list.only = FALSE)
     check_examples(data, file = x)
     puts(data, file = x)
@@ -208,21 +208,22 @@ subset.Rd <- function(x, subset, values = FALSE, ...) {
 #' @export
 #'
 subset.pack_desc <- function(x, ...) {
-  x <- strsplit(x[1L, ], "\n", fixed = TRUE)
-  x <- lapply(x, function(y) y[nzchar(y)])
+  result <- list()
   for (name in c("Depends", "Imports", "Suggests"))
     if (!is.null(entry <- x[[name]])) {
       entry <- unlist(strsplit(entry, "\\s*,\\s*", perl = TRUE))
+      entry <- sub("^\\s+", "", entry, perl = TRUE)
+      entry <- sub("\\s+$", "", entry, perl = TRUE)
       entry <- sub("\\s*\\([^)]*\\)$", "", entry, perl = TRUE)
-      x[[name]] <- entry[entry != "R"]
+      result[[name]] <- entry[entry != "R"]
     }
   for (name in "Collate")
     if (!is.null(entry <- x[[name]])) {
       entry <- unlist(strsplit(entry, "\\s+", perl = TRUE))
-      x[[name]] <- gsub('"', "", gsub("'", "", entry, fixed = TRUE),
+      result[[name]] <- gsub('"', "", gsub("'", "", entry, fixed = TRUE),
         fixed = TRUE)
     }
-  x
+  result
 }
 
 #' @rdname subset

@@ -2,6 +2,7 @@
 \alias{update}
 \alias{update.class_desc}
 \alias{update.classes_desc}
+\alias{update.numeric_version}
 \alias{update.pack_desc}
 \alias{update.pack_descs}
 \title{Modify class- or package-description objects}
@@ -17,6 +18,8 @@
     date.format = "\%Y-\%m-\%d", ...)
 
   \method{update}{pack_descs} (object, ...)
+
+  \method{update}{numeric_version} (object, ...)
 }
 \arguments{
   \item{object}{Object of class \sQuote{class_desc},

@@ -49,14 +49,15 @@
 #' @family package-functions
 #' @keywords package
 #' @seealso base::read.dcf base::write.dcf base::source
+#' @seealso utils::packageDescription
 #' @examples
 #'
 #' pkg <- find.package(c("tools", "utils"), quiet = TRUE)
 #'
 #' # Reading
-#' (x <- pack_desc(pkg, "read"))
+#' (x <- pack_desc(pkg, "read")) # should look similar to packageVersion()
 #' stopifnot(is.list(x), names(x) == pkg, inherits(x, "pack_descs"))
-#' stopifnot(sapply(x, is.character), sapply(x, inherits, what = "pack_desc"))
+#' stopifnot(sapply(x, is.list), sapply(x, inherits, what = "pack_desc"))
 #'
 #' # Updating (in demo mode, of course)
 #' (x <- pack_desc(pkg, "update", demo = TRUE, date.format = "%Y/%m/%d"))
@@ -84,7 +85,9 @@ pack_desc.character <- function(pkg, action = c("read", "update", "source"),
     envir = globalenv(), ...) {
   LL(version, demo, date.format)
   x <- lapply(normalizePath(file.path(pkg, "DESCRIPTION")), function(file) {
-    structure(.Data = read.dcf(file), class = "pack_desc", filename = file)
+    stopifnot(nrow(y <- read.dcf(file)) == 1L)
+    structure(.Data = as.list(y[1L, ]), file = file,
+      class = c("pack_desc", "packageDescription"))
   })
   x <- structure(.Data = x, .Names = pkg, class = "pack_descs")
   case(match.arg(action),
@@ -92,12 +95,14 @@ pack_desc.character <- function(pkg, action = c("read", "update", "source"),
     update = {
       x <- update(object = x, version = version, date.format = date.format)
       if (!demo)
-        puts(x = x, file = vapply(x, attr, character(1L), which = "filename"),
-          ...)
+        puts(x = x, file = vapply(x, attr, character(1L), which = "file"), ...)
       wanted <- "Date"
       if (version)
         wanted <- c(wanted, "Version")
-      do.call(rbind, sapply(x, function(y) y[1L, wanted], simplify = FALSE))
+      x <- lapply(wanted, function(i) vapply(x, `[[`, character(1L), i = i))
+      x <- do.call(cbind, x)
+      colnames(x) <- wanted
+      x
     },
     source = source_files(x = x, demo = demo, envir = envir, ...)
   )
@@ -363,8 +368,8 @@ is_pkg_dir <- function(x) UseMethod("is_pkg_dir")
 #' @export
 #'
 is_pkg_dir.character <- function(x) {
-  result <- utils::file_test("-d", x)
-  result[result] <- utils::file_test("-f", file.path(x[result], "DESCRIPTION"))
+  result <- file_test("-d", x)
+  result[result] <- file_test("-f", file.path(x[result], "DESCRIPTION"))
   result
 }
 
@@ -443,6 +448,8 @@ delete_o_files.character <- function(x, ext = "o", ignore = NULL, ...) {
 #'   also the next argument).
 #' @param accept.tabs Logical scalar indicating whether tabulators are
 #'   accepted.
+#' @param three.dots Logical scalar indicating whether \code{:::} operators
+#'   should result in a warning.
 #' @param what Character vector naming the subdirectories to consider; passed
 #'   to \code{\link{pkg_files}}
 #' @param encoding Character scalar passed as \sQuote{.encoding} argument to
@@ -490,15 +497,16 @@ check_R_code <- function(x, ...) UseMethod("check_R_code")
 check_R_code.character <- function(x, lwd = 80L, indention = 2L,
     roxygen.space = 1L, comma = TRUE, ops = TRUE, parens = TRUE,
     assign = TRUE, modify = FALSE, ignore = NULL, accept.tabs = FALSE,
-    what = "R", encoding = "", ...) {
+    three.dots = TRUE, what = "R", encoding = "", ...) {
   spaces <- function(n) paste(rep.int(" ", n), collapse = "")
   LL(lwd, indention, roxygen.space, modify, comma, ops, parens, assign,
-    accept.tabs)
+    accept.tabs, three.dots)
   roxygen.space <- sprintf("^#'%s", spaces(roxygen.space))
   check_fun <- function(x) {
     infile <- attr(x, ".filename")
     complain <- function(text, is.bad) {
-      problem(text, infile = infile, line = which(is.bad))
+      if (any(is.bad))
+        problem(text, infile = infile, line = which(is.bad))
     }
     bad_ind <- function(text, n) {
       attr(regexpr("^ *", text, perl = TRUE), "match.length") %% n != 0L
@@ -506,54 +514,50 @@ check_R_code.character <- function(x, lwd = 80L, indention = 2L,
     unquote <- function(x) {
       x <- gsub(QUOTED, "QUOTED", x, perl = TRUE)
       x <- sub(QUOTED_END, "QUOTED", x, perl = TRUE)
-      sub(QUOTED_BEGIN, "QUOTED", x, perl = TRUE)
+      x <- sub(QUOTED_BEGIN, "QUOTED", x, perl = TRUE)
+      gsub("%[^%]+%", "%%", x, perl = TRUE)
     }
     code_check <- function(x) {
       x <- sub("^\\s+", "", x, perl = TRUE)
-      if (any(bad <- grepl(";", x, fixed = TRUE)))
-        complain("semicolon contained", bad)
-      if (any(bad <- grepl("  ", x, fixed = TRUE)))
-        complain("space followed by space", bad)
-      if (any(bad <- grepl(":::", x, fixed = TRUE)))
-        complain("':::' operator used", bad)
+      complain("semicolon contained", grepl(";", x, fixed = TRUE))
+      complain("space followed by space", grepl("  ", x, fixed = TRUE))
+      if (three.dots)
+        complain("':::' operator used", grepl(":::", x, fixed = TRUE))
       if (comma) {
-        if (any(bad <- grepl(",[^\\s]", x, perl = TRUE)))
-          complain("comma not followed by space", bad)
-        if (any(bad <- grepl("[^,]\\s+,", x, perl = TRUE)))
-          complain("comma preceded by space", bad)
+        complain("comma not followed by space",
+          grepl(",[^\\s]", x, perl = TRUE))
+        complain("comma preceded by space", grepl("[^,]\\s+,", x, perl = TRUE))
       }
       if (ops) {
-        if (any(bad <- grepl(OPS_LEFT, x, perl = TRUE)))
-          complain("operator not preceded by space", bad)
-        if (any(bad <- grepl(OPS_RIGHT, x, perl = TRUE)))
-          complain("operator not followed by space", bad)
+        complain("operator not preceded by space",
+          grepl(OPS_LEFT, x, perl = TRUE))
+        complain("operator not followed by space",
+          grepl(OPS_RIGHT, x, perl = TRUE))
       }
-      if (assign && any(bad <- grepl("(^|[^=<>!])=\\s*$", x, perl = TRUE)))
-        complain("line ends in single equals sign", bad)
+      if (assign)
+        complain("line ends in single equals sign",
+          grepl("(^|[^=<>!])=\\s*$", x, perl = TRUE))
       if (parens) {
-        if (any(bad <- grepl("\\b(if|for|while)\\(", x, perl = TRUE)))
-          complain("'if', 'for' or 'while' directly followed by parenthesis",
-            bad)
-        if (any(bad <- grepl("[([{]\\s", x, perl = TRUE)))
-          complain("opening parenthesis or bracket followed by space", bad)
-        if (any(bad <- grepl("[^,]\\s+[)}\\]]", x, perl = TRUE)))
-          complain("closing parenthesis or bracket preceded by space", bad)
-        if (any(bad <- grepl("[)\\]}][^\\s()[\\]}$:,;]", x, perl = TRUE)))
-          complain(
-            "closing parenthesis or bracket followed by wrong character", bad)
+        complain("'if', 'for' or 'while' directly followed by parenthesis",
+          grepl("\\b(if|for|while)\\(", x, perl = TRUE))
+        complain("opening parenthesis or bracket followed by space",
+          grepl("[([{]\\s", x, perl = TRUE))
+        complain("closing parenthesis or bracket preceded by space",
+          grepl("[^,]\\s+[)}\\]]", x, perl = TRUE))
+        complain("closing parenthesis or bracket followed by wrong character",
+          grepl("[)\\]}][^\\s()[\\]}$@:,;]", x, perl = TRUE))
       }
     }
     if (modify) {
       x <- sub("\\s+$", "", x, perl = TRUE)
       x <- gsub("\t", spaces(indention), x, fixed = TRUE)
-    } else if (any(bad <- grepl("\t", x, fixed = TRUE)) && !accept.tabs)
-      complain("tab contained", bad)
-    if (any(bad <- nchar(x) > lwd))
-      complain(sprintf("line longer than %i", lwd), bad)
-    if (any(bad <- bad_ind(sub(roxygen.space, "", x, perl = TRUE), indention)))
-      complain(sprintf("indention not multiple of %i", indention), bad)
-    if (any(bad <- grepl("^\\s+#'", x, perl = TRUE)))
-      complain("roxygen comment not placed at beginning of line", bad)
+    } else if (!accept.tabs)
+      complain("tab contained", grepl("\t", x, fixed = TRUE))
+    complain(sprintf("line longer than %i", lwd), nchar(x) > lwd)
+    complain(sprintf("indention not multiple of %i", indention),
+      bad_ind(sub(roxygen.space, "", x, perl = TRUE), indention))
+    complain("roxygen comment not placed at beginning of line",
+      grepl("^\\s+#'", x, perl = TRUE))
     code_check(sub("\\s*#.*", "", unquote(x), perl = TRUE))
     if (modify)
       x

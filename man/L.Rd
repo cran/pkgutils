@@ -40,10 +40,9 @@ stopifnot(inherits(x, "try-error"))
 
   Other auxiliary-functions: \code{\link{LL}},
   \code{\link{case}},   \code{\link{flatten}},
-  \code{\link{listing}},
-        \code{\link{logfile}},   \code{\link{map_files}},
+    \code{\link{listing}},
+          \code{\link{logfile}},   \code{\link{map_files}},
   \code{\link{must}},
-  \code{\link{run_ruby}},     \code{\link{sections}},
-    }
+  \code{\link{run_ruby}},     }
 \keyword{utilities}
 

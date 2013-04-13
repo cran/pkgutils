@@ -130,19 +130,19 @@ class_rdfiles.character <- function(pkg, classes,
     name = default_rdfile_name(pkg, classes),
     dump = {
       must.detach <- get_package(pkg)
-      invisible(mapply(methods::promptClass, classes,
+      invisible(mapply(promptClass, classes,
         default_rdfile_name(pkg, classes)))
     },
     update = {
       must.detach <- get_package(pkg)
-      cd <- classes_desc(sapply(classes, methods::promptClass, filename = NA,
+      cd <- classes_desc(sapply(classes, promptClass, filename = NA,
         simplify = FALSE))
       cd <- update(object = cd, ...)
       puts(cd, default_rdfile_name(pkg, classes))
     },
     content = {
       must.detach <- get_package(pkg)
-      classes_desc(sapply(classes, methods::promptClass, filename = NA,
+      classes_desc(sapply(classes, promptClass, filename = NA,
         simplify = FALSE))
     }
   )
@@ -231,7 +231,6 @@ class_name.classes_desc <- function(x) {
 NULL
 
 #' @rdname update
-#' @aliases update.classes_desc
 #' @method update classes_desc
 #' @export
 #'
@@ -240,7 +239,6 @@ update.classes_desc <- function(object, ...) {
 }
 
 #' @rdname update
-#' @aliases update.class_desc
 #' @method update class_desc
 #' @export
 #'
@@ -263,28 +261,19 @@ update.class_desc <- function(object,
 }
 
 #' @rdname update
-#' @aliases update.pack_desc
 #' @method update pack_desc
 #' @export
 #'
 update.pack_desc <- function(object, version = TRUE, date.format = "%Y-%m-%d",
     ...) {
-  update_version <- function(x) {
-    incr_last <- function(x) c(x[-(z <- length(x))], as.integer(x[z]) + 1L)
-    x <- strsplit(x, "-", fixed = TRUE)
-    long <- vapply(x, length, integer(1L)) > 1L
-    x[long] <- lapply(x[long], incr_last)
-    unlist(lapply(x, paste, collapse = "-"))
-  }
   LL(version, date.format)
-  if ("Date" %in% colnames(object)) {
-    old.date <- object[1L, "Date"]
-    object[1L, "Date"] <- format(Sys.time(), date.format)
-    if (version && old.date < object[1L, "Date"])
-      object[1L, "Version"] <- update_version(object[1L, "Version"])
+  if (is.null(old.date <- object$Date)) {
+    warning(sprintf("file '%s' contains no date", attr(object, "file")))
+    object$Date <- format(Sys.time(), date.format)
   } else {
-    warning("file ", attr(object, "filename"), " contains no date")
-    object <- cbind(object, Date = format(Sys.time(), date.format))
+    object$Date <- format(Sys.time(), date.format)
+    if (version && old.date < object$Date)
+      object$Version <- as.character(update(numeric_version(object$Version)))
   }
   object
 }
@@ -296,6 +285,20 @@ update.pack_desc <- function(object, version = TRUE, date.format = "%Y-%m-%d",
 #'
 update.pack_descs <- function(object, ...) {
   structure(lapply(X = object, FUN = update, ...), class = oldClass(object))
+}
+
+#' @rdname update
+#' @method update numeric_version
+#' @export
+#'
+update.numeric_version <- function(object, ...) {
+  incr <- function(x) {
+    if (n <- length(x)) # invalid version strings yielded zero-length vectors
+      x[n] <- x[n] + 1L
+    x
+  }
+  object[] <- rapply(object, incr, classes = "integer", how = "replace")
+  object
 }
 
 

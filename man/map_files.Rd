@@ -6,7 +6,7 @@
   map_files(x, ...)
 
   \method{map_files}{character} (x, mapfun, ...,
-    .attr = ".filename", .encoding = "")
+    .attr = ".filename", .encoding = "", .sep = NULL)
 }
 \arguments{
   \item{x}{Character vector of input (and potentially
@@ -25,6 +25,12 @@
 
   \item{.encoding}{Passed to \code{readLines} as
   \sQuote{encoding} argument.}
+
+  \item{.sep}{\code{NULL} or character scalar. If empty,
+  ignored. Otherwise used as output line separator, causing
+  outfiles to always be written unless \code{mapfun}
+  returns \code{NULL}. Can be used to just change line
+  breaks if \code{mapfun} is \code{identity}.}
 }
 \value{
   Logical vector using \code{x} as names, with \code{TRUE}
@@ -45,15 +51,19 @@
   If \code{mapfun} returns \code{NULL}, it is ignored.
   Otherwise is it an error if \code{mapfun} does not return
   a character vector. If this vector is identical to the
-  lines read from the file, it is not printed to this file.
-  Otherwise the file is attempted to be overwritten with
-  the result of \code{mapfun}.
+  lines read from the file, it is not printed to this file
+  unless \code{sep} is non-empty. Otherwise the file is
+  attempted to be overwritten with the result of
+  \code{mapfun}.
 }
 \examples{
 tmpfile <- tempfile()
 write(letters, file = tmpfile)
 (x <- map_files(tmpfile, identity))
 stopifnot(!x)
+# now enforce other output line separator
+(x <- map_files(tmpfile, identity, .sep = "\n"))
+stopifnot(x)
 (x <- map_files(tmpfile, toupper))
 stopifnot(x)
 x <- readLines(tmpfile)
@@ -62,12 +72,12 @@ stopifnot(x == LETTERS)
 stopifnot(!x)
 }
 \seealso{
-  base::readLines
+  base::readLines base::writeLines base::identity
 
   Other auxiliary-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{flatten}},   \code{\link{listing}},       \code{\link{logfile}},   \code{\link{must}},
-  \code{\link{run_ruby}},     \code{\link{sections}},
-    }
+    \code{\link{flatten}},   \code{\link{listing}},
+          \code{\link{logfile}},   \code{\link{must}},
+  \code{\link{run_ruby}},     }
 \keyword{IO}
 

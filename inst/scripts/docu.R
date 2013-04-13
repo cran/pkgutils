@@ -28,15 +28,17 @@ for (lib in c("utils", "methods", "pkgutils", "roxygen2", "optparse"))
 ################################################################################
 
 
-copy_dir <- function(from, to) {
-  LL(from, to)
+copy_dir <- function(from, to, delete) {
+  LL(from, to, delete)
+  files <- list.files(from, recursive = TRUE, full.names = TRUE)
+  files <- c(files, list.files(pattern = "\\.Rbuildignore", full.names = TRUE, 
+    all.files = TRUE, recursive = TRUE))
+  if (nzchar(delete))
+    files <- files[!grepl(delete, files, perl = TRUE, ignore.case = TRUE)]
+  dirs <- sub(from, to, unique.default(dirname(files)), fixed = TRUE)
   unlink(to, recursive = TRUE)
-  if (!dir.create(to, recursive = TRUE))
-    stop(sprintf("failed to create directory '%s'", to))
-  files <- list.files(from, recursive = FALSE, full.names = TRUE,
-    all.files = TRUE)
-  files <- files[!basename(files) %in% c(".", "..")]
-  file.copy(files, to, recursive = TRUE)
+  vapply(dirs[order(nchar(dirs))], dir.create, logical(1L), recursive = TRUE)
+  file.copy(files, sub(from, to, files, fixed = TRUE))
 }
 
 
@@ -46,8 +48,8 @@ do_style_check <- function(files, opt) {
   y <- check_R_code(x = files, lwd = opt$width, ops = !opt$opsoff,
     comma = !opt$commaoff, indention = opt$blank, roxygen.space = opt$jspaces,
     modify = opt$modify, ignore = opt$good, parens = !opt$parensoff,
-    assign = !opt$assignoff, accept.tabs = opt$tabs, what = subdirs,
-    encoding = opt$encoding)
+    assign = !opt$assignoff, accept.tabs = opt$tabs, three.dots = !opt$dotsok,
+    what = subdirs, encoding = opt$encoding)
   isna <- is.na(y)
   if (any(y & !isna))
     message(paste(sprintf("file '%s' has been modified", names(y)[y & !isna]),
@@ -107,7 +109,8 @@ option.parser <- OptionParser(option_list = list(
     help = "Subdirectories to delete, colon-separated list [default: %default]",
     metavar = "LIST"),
 
-  # D
+  make_option(c("-D", "--dotsok"), action = "store_true", default = FALSE,
+    help = "Ignore ::: when checking R style [default: %default]"),
 
   make_option(c("-e", "--exec"), type = "character", default = "ruby",
     help = "Ruby executable used if -p or -s is chosen [default: %default]",
@@ -149,7 +152,9 @@ option.parser <- OptionParser(option_list = list(
     help = paste("Number of spaces starting Roxygen-style comments",
     "[default: %default]"), metavar = "NUMBER"),
 
-  # J
+  make_option(c("-J", "--junk"), type = "character", default = "",
+    help = "Pattern of files to not copy with directory [default: %default]",
+    metavar = "PATTERN"),
 
   make_option(c("-k", "--keep"), action = "store_true", default = FALSE,
     help = "Keep the version number in DESCRIPTION files [default: %default]"),
@@ -290,6 +295,7 @@ if (opt$Rcheck) { # R style check only
 if (length(package.dirs)) {
   if (length(bad <- package.dirs[!is_pkg_dir(package.dirs)]))
     stop("not a package directory: ", bad[1L])
+  package.dirs <- dirname(sprintf("%s/.", package.dirs))
 } else {
   package.dirs <- list.files()
   package.dirs <- package.dirs[is_pkg_dir(package.dirs)]
@@ -359,7 +365,7 @@ for (i in seq_along(package.dirs)) {
     # directory arguments because due to a Roxygen2 bug this would result in
     # duplicated documentation for certain S4 methods.
     message(sprintf("Copying '%s' to '%s'...", in.dir, out.dir))
-    copy_dir(in.dir, out.dir)
+    copy_dir(in.dir, out.dir, opt$junk)
     if (length(opt$delete)) {
       message("Deleting specified subdirectories (if present) of", msg)
       unlink(file.path(out.dir, opt$delete), recursive = TRUE)
@@ -405,7 +411,7 @@ for (i in seq_along(package.dirs)) {
     errs <- errs + build.err
     if (!opt$folder) {
       pkg.file <- sprintf("%s_%s.tar.gz", out.dir,
-        pack_desc(out.dir)[[1L]][, "Version"])
+        pack_desc(out.dir)[[1L]]$Version)
       msg <- sprintf(" archive file '%s'...", pkg.file)
     }
   }

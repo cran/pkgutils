@@ -1,4 +1,39 @@
 
+2012-04-15 (4th release on CRAN)
+
+- fixed bug in check_R_code() that caused removal of quoted sections of a line
+  of code to remove too much; fixed other bug causing false reports of missing
+  space between operators; fixed third bug causing false reports of wrong
+  character after bracket or parentheses
+
+- fixed bug in 'repair_S4_docu.rb' script that caused a wrong error message if
+  documentation files were not found
+
+- fixed bug in 'merge.R' that affected the '-c' argument if the merge column
+  was numeric
+
+- syntax highlighting for gedit now correctly displays indexing with '$' after
+  indexing with brackets
+
+- 'merge.R' now repairs empty column names (which would cause merge() to 
+  crash) and reads from STDIN (indicated as file name '-').
+
+- the first argument of mypdf() was renamed
+
+- pack_desc(..., "source") now suppresses package startup messages
+
+- check_R_code() gets a 'three.dots' argument, and the 'docu.R' script an
+  according '--dotsok/-D' switch
+
+- listing() gets a 'hf.collapse' argument and more options in the 'last.sep' 
+  argument; 'style' can be run through I() and then causes names and values to
+  be swapped
+
+- listing.default() now deals with a greater variety of objects
+
+- added (trivial) default method for flatten()
+
+
 2012-12-19 (3rd release on CRAN)
 
 - more robust approach in check_keywords() to find the KEYWORDS.db file (bug

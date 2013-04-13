@@ -72,14 +72,16 @@ SPECIAL_PAPER_SIZES <- structure(
     "junior legal", "large post", "ledger", "legal", "letter", "medium",
     "memo", "monarch", "organizer j", "organizer k", "organizer l",
     "organizer m", "post", "quad demy", "quarto", "royal", "statement",
-    "super b", "tabloid", "us std fanfold"), c("width","height"))
+    "super b", "tabloid", "us std fanfold"), c("width", "height"))
 )
 
 
 ################################################################################
 
 
-QUOTED <- "(%s([^\"]|\\\")*%s|%s[^`]+%s|%s([^']|\')*%s)"
+# TODO: this still does not cover all cases
+#
+QUOTED <- "(%s(\\\\\"|[^\"])*%s|%s[^`]+%s|%s(\'|[^'])*%s)"
 
 QUOTED_END <- sprintf(QUOTED, '"', "$", "`", "$", "'", "$")
 
@@ -100,5 +102,10 @@ OPS_RIGHT <- paste("([~/^]|%[^%]*%)[^\\s]", "[*][^\\s*]", "<[^\\s<=-]",
 
 ################################################################################
 
+
+GREGEXPR_NO_MATCH <- structure(-1L, match.length = -1L)
+
+
+################################################################################
 
 

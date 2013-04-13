@@ -134,7 +134,7 @@
     </context>
 
     <context id="unevaluated-name" style-ref="unevaluated-name">
-      <match>(?&lt;![^\w\.)`]])[$@]([\w\.]+|(?=`))</match>
+      <match>(?&lt;![^\w\.)`\]])[$@]([\w\.]+|(?=`))</match>
     </context>
 
     <context id="backquoted-name" style-ref="backquoted-name">

@@ -49,9 +49,9 @@ max_rgb_contrast <- function(x, ...) UseMethod("max_rgb_contrast")
 #' @export
 #'
 max_rgb_contrast.default <- function(x, ...) {
-  col.rgb <- t(grDevices::col2rgb(x))
+  col.rgb <- t(col2rgb(x))
   rownames(col.rgb) <- x
-  pco <- stats::cmdscale(1 / log(dist(col.rgb)), k = 1L)
+  pco <- cmdscale(1 / log(dist(col.rgb)), k = 1L)
   names(sort.int(pco[, 1L]))
 }
 
@@ -162,7 +162,7 @@ paper_size.character <- function(x, landscape = FALSE, inches = FALSE, ...) {
 #' is that \code{mypdf} determines the width and the height of the plotting
 #' region from the paper format.
 #'
-#' @param x Passed as \sQuote{file} argument to \code{pdf} from the
+#' @param file Passed as \sQuote{file} argument to \code{pdf} from the
 #'   \pkg{grDevices} package. See there for details.
 #' @param paper Character scalar like the eponymous argument of \code{pdf},
 #'   but here it is passed to \code{\link{paper_size}} to determine the
@@ -185,17 +185,17 @@ paper_size.character <- function(x, landscape = FALSE, inches = FALSE, ...) {
 #'   dev.off()
 #' }
 #'
-mypdf <- function(x, ...) UseMethod("mypdf")
+mypdf <- function(file, ...) UseMethod("mypdf")
 
 #' @rdname mypdf
 #' @method mypdf character
 #' @export
 #'
-mypdf.character <- function(x, paper = "a4r", prop = 0.9, ...) {
+mypdf.character <- function(file, paper = "a4r", prop = 0.9, ...) {
   paper.size <- paper_size(paper)
   width <- prop[1L] * paper.size[, "width"]
   height <- prop[length(prop)] * paper.size[, "height"]
-  pdf(file = x, paper = paper, width = width, height = height, ...)
+  pdf(file = file, paper = paper, width = width, height = height, ...)
 }
 
 

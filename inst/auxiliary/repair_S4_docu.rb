@@ -226,52 +226,26 @@ private
   end
 
 
-  def rd_file # :nodoc:
+  def obvious_rd_file # :nodoc:
     File.join man_dir, "#{cleaned_name}.Rd"
-  end
-
-
-=begin
-  def rd_file_with_classes # :nodoc:
-    rd_file.sub(/\.Rd$/, "-comma#{cleaned_s4_classes}.Rd")
-  end
-  
-  
-  def rd_file_with_class # :nodoc:
-    rd_file.sub(/\.Rd$/, "-comma#{cleaned_s4_class}.Rd")
-  end
-
-
-  def rd_file_with_class_short # :nodoc:
-    rd_file.sub(/\.Rd$/, "-#{cleaned_s4_class}.Rd")
-  end
-
-
-  def rd_file_with_class_dotted # :nodoc:
-    rd_file.sub(/\.Rd$/, ".#{cleaned_s4_class}.Rd")
-  end
-
-
-  private :rd_file_with_classes, :rd_file_with_class,
-    :rd_file_with_class_short, :rd_file_with_class_dotted
-=end
-
-  
-  def rd_files # :nodoc:
-    #[rd_file_with_classes, rd_file_with_class, rd_file_with_class_short,
-    #  rd_file_with_class_dotted, rd_file].uniq
-    [rd_file]
   end
 
 
 public
 
 
+  # Create array of names Rd files one of which is expected.
+  #
+  def possible_rd_files # :nodoc:
+    [obvious_rd_file]
+  end
+
+
   # Check potential locations of the S4 method's Rd file and return the first
   # one that exists, nil if there is none.
   #
   def existing_rd_file
-    @rdfile ||= rd_files.select {|file| File.exist? file}.first
+    @rdfile ||= possible_rd_files.select {|file| File.exist? file}.first
   end
 
 
@@ -368,8 +342,8 @@ class Array
       if (rdfile = s4_method.existing_rd_file)
         result[rdfile] << s4_method
       else
-        raise "Rd files for method #{s4_method.name} (#{s4_method.s4_class} " +
-          "=> #{s4_method.rd_files.join(" ")}) do not exist!"
+        raise "Rd files for method #{s4_method.name} " +
+          "(#{s4_method.possible_rd_files.join(", ")}) do not exist!"
       end
     end
     result
