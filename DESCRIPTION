@@ -1,6 +1,6 @@
 Package: pkgutils
-Version: 0.4.0
-Date: 2013-04-13
+Version: 0.4.1
+Date: 2013-04-15
 Title: pkgutils -- Utilities for creating R packages.
 Author: Markus Goeker <markus.goeker@dsmz.de>
 Maintainer: Markus Goeker <markus.goeker@dsmz.de>
@@ -21,10 +21,7 @@ Collate: 'constants.R' 'packages.R' 'auxiliary.R' 'class.R'
         'character.R'
 LazyData: yes
 LazyDataCompression: bzip2
-Repository: CRAN
-Repository/R-Forge/Project: opm
-Repository/R-Forge/Revision: 146
-Repository/R-Forge/DateTimeStamp: 2013-04-13 02:09:18
-Date/Publication: 2013-04-13 18:32:51
-Packaged: 2013-04-13 02:15:56 UTC; rforge
+Packaged: 2013-04-14 22:46:55 UTC; goeker
 NeedsCompilation: no
+Repository: CRAN
+Date/Publication: 2013-04-15 08:08:55

@@ -312,7 +312,7 @@ listing.character <- function(x, header = NULL, footer = NULL, prepend = FALSE,
     if (is.character(x))
       x
     else if (is.numeric(x))
-      sprintf(sprintf("%%0%is", x), "")
+      sprintf(sprintf("%%%is", x), "")
     else if (x)
       "\t"
     else
