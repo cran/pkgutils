@@ -46,7 +46,9 @@
 }
 \description{
   Run Ruby with an externally provided Ruby script or with
-  code provided at the command line with \sQuote{-e}.
+  code provided at the command line with \sQuote{-e}. See
+  \code{\link{repair_S4_docu}} and \code{\link{swap_code}}
+  as examples of functions based on this one.
 }
 \examples{
 if (nzchar(run_ruby(NULL))) {
@@ -59,12 +61,6 @@ if (nzchar(run_ruby(NULL))) {
 }
 \seealso{
   base::system base::Sys.which
-
-  Other auxiliary-functions: \code{\link{L}},
-  \code{\link{LL}}, \code{\link{case}},
-    \code{\link{flatten}},   \code{\link{listing}},
-          \code{\link{logfile}},   \code{\link{map_files}},
-  \code{\link{must}}
 }
 \keyword{interface}
 

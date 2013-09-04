@@ -33,7 +33,6 @@
 #'     install Rtools, see \url{http://cran.r-project.org/bin/windows/Rtools/}.
 #'     }
 #' }
-#~ @export
 #' @keywords package
 #'
 NULL
@@ -57,6 +56,8 @@ DIRS$WD_INDEX <- 0L
 ################################################################################
 
 
+# used by paper_size()
+#
 SPECIAL_PAPER_SIZES <- structure(
   .Data = c(216, 432, 559, 864, 279, 457, 108, 381, 445, 572, 584, 184, 216,
     216, 210, 216, 216, 203, 140, 140, 127, 419, 279, 215.9, 215.9, 457, 140,
@@ -79,9 +80,10 @@ SPECIAL_PAPER_SIZES <- structure(
 ################################################################################
 
 
-# TODO: this still does not cover all cases
-#
+# patterns used by check_R_code()
+
 QUOTED <- "(%s(\\\\\"|[^\"])*%s|%s[^`]+%s|%s(\'|[^'])*%s)"
+# TODO: this still does not cover all cases
 
 QUOTED_END <- sprintf(QUOTED, '"', "$", "`", "$", "'", "$")
 
@@ -98,12 +100,6 @@ OPS_LEFT <- paste("[^\\s]([~/^]|%[^%]*%)", "[^\\s*][*]", "[^\\s<]<",
 #
 OPS_RIGHT <- paste("([~/^]|%[^%]*%)[^\\s]", "[*][^\\s*]", "<[^\\s<=-]",
   ">[^\\s>=]", "=[^\\s=,]", "&[^\\s&]", "\\|[^\\s|]", sep = "|")
-
-
-################################################################################
-
-
-GREGEXPR_NO_MATCH <- structure(-1L, match.length = -1L)
 
 
 ################################################################################

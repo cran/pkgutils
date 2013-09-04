@@ -1,3 +1,31 @@
+pkgutils 0.5-0
+---------------
+
+Bug fixes:
+
+- fixed bug in 'docu.R' that created a wrong archive file name
+
+- fixed bug in vertical-merge running mode 'merge.R' script
+
+- fixed bug in demo mode of pack_desc()
+
+New features:
+
+- new collect() method for lists
+
+- more arguments for flatten()
+
+- repair_docu() repairs too long usage lines
+
+- repair_S4_docu() can map Rd file names
+
+- 'merge.R' can join rows
+
+Other user-visible changes:
+
+- improved package documentation
+
+
 pkgutils 0.4-0
 ---------------
 

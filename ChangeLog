@@ -1,4 +1,35 @@
 
+2012-08-20 (5th release on CRAN)
+
+- fixed bug in 'docu.R' that caused wrong archive file name to be passed to 'R
+  CMD check' when running script not from parent directory
+
+- fixed bug in vertical-merge running mode of 'merge.R' script
+
+- fixed bug in demo mode of pack_desc() that caused the file names to be
+  returned invisibly
+
+- new collect() method for lists
+
+- the default flatten() method now only accepts atomic objects; the list
+  method gets a 'use.names' argument
+
+- repair_docu() now also repairs too long usage lines (which cause a complaint
+  when running 'R CMD check')
+
+- repair_S4_docu() now includes an optional mapping of Rd file names (much like
+  the @rdname mechanism in Roxygen2, but based on a distinct annotation)
+
+- the package documentation has been streamlined (related functions are now
+  documented together)
+
+- the documentation of repair_S4_docu() has been completed
+
+- swap_code() now ignores (does not modify) Roxygen2 comment lines
+
+- 'merge.R' gets an option for joining rows and deals now with duplicated
+  join-column entries in conjunction with -c
+
 2012-04-15 (4th release on CRAN)
 
 - fixed bug in check_R_code() that caused removal of quoted sections of a line

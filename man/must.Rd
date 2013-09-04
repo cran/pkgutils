@@ -36,10 +36,9 @@ stopifnot(inherits(x, "try-error"))
 \seealso{
   base::tryCatch base::stop base::options
 
-  Other auxiliary-functions: \code{\link{L}},
+  Other coding-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{flatten}},   \code{\link{listing}},
-          \code{\link{logfile}},   \code{\link{map_files}},
-    \code{\link{run_ruby}},     }
+    \code{\link{collect}},   \code{\link{flatten}},   \code{\link{listing}},
+        }
 \keyword{utilities}
 

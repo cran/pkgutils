@@ -36,6 +36,7 @@ class String
   # occur.
   #
   def swap sep
+    return self if self =~ /^\s*#'/ # ignore Roxygen2 comments
     result = lstrip.partition sep
     if result[1].empty?
       self

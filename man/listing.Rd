@@ -74,9 +74,11 @@
 
   \item{collapse}{Character scalar used to join the
   resulting vector elements.  It is by default also applied
-  jor joining \code{header} and \code{footer} footer with
+  for joining \code{header} and \code{footer} footer with
   them (if provided). This can be turned off using
-  hf.collapse.}
+  hf.collapse.  By default this is an empty string for
+  \sQuote{sentence} style, the newline character
+  otherwise.}
 
   \item{force.numbers}{Logical scalar. Always use numbers
   instead of the \sQuote{names} attribute?}
@@ -138,11 +140,9 @@ stopifnot(listing(pi) == "1: 3.141593") # controlled by getOption("digits")
 \seealso{
   base::message base::warning base::stop base::formatDL
 
-  Other auxiliary-functions: \code{\link{L}},
+  Other coding-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{flatten}},   \code{\link{logfile}},
-    \code{\link{map_files}},
-  \code{\link{must}},
-  \code{\link{run_ruby}},     }
+    \code{\link{collect}},   \code{\link{flatten}},   \code{\link{must}}
+}
 \keyword{utilities}
 

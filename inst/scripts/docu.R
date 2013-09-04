@@ -4,13 +4,13 @@
 ################################################################################
 #
 # docu.R -- Rscript script to non-interactively create documentation for an R
-#   package with Roxygen2, to improve this documentation, to update the 
+#   package with Roxygen2, to improve this documentation, to update the
 #   DESCRIPTION file, to check the package and to install the package. Can also
 #   check some aspects of the R coding style and conduct some preprocessing of
 #   the code files. Part of the pkgutils package. See the manual for details.
 #
 # Package directory names can be provided at the command line. If none are
-# given, the working directory is checked for subdirectories that contain a 
+# given, the working directory is checked for subdirectories that contain a
 # DESCRIPTION file, and it is then attempted to document those, if any.
 #
 # (C) 2012 by Markus Goeker (markus [DOT] goeker [AT] dsmz [DOT] de)
@@ -31,13 +31,13 @@ for (lib in c("utils", "methods", "pkgutils", "roxygen2", "optparse"))
 copy_dir <- function(from, to, delete) {
   LL(from, to, delete)
   files <- list.files(from, recursive = TRUE, full.names = TRUE)
-  files <- c(files, list.files(pattern = "\\.Rbuildignore", full.names = TRUE, 
+  files <- c(files, list.files(pattern = "\\.Rbuildignore", full.names = TRUE,
     all.files = TRUE, recursive = TRUE))
   if (nzchar(delete))
     files <- files[!grepl(delete, files, perl = TRUE, ignore.case = TRUE)]
   dirs <- sub(from, to, unique.default(dirname(files)), fixed = TRUE)
   unlink(to, recursive = TRUE)
-  vapply(dirs[order(nchar(dirs))], dir.create, logical(1L), recursive = TRUE)
+  vapply(dirs[order(nchar(dirs))], dir.create, NA, recursive = TRUE)
   file.copy(files, sub(from, to, files, fixed = TRUE))
 }
 
@@ -70,7 +70,7 @@ run_sweave <- function(files, opt) {
       warning(e)
       1L
     })
-  }, integer(1L)))
+  }, 0L))
 }
 
 
@@ -410,7 +410,7 @@ for (i in seq_along(package.dirs)) {
     build.err <- run_R_CMD(out.dir, "build", opt$buildopts)
     errs <- errs + build.err
     if (!opt$folder) {
-      pkg.file <- sprintf("%s_%s.tar.gz", out.dir,
+      pkg.file <- sprintf("%s_%s.tar.gz", basename(out.dir),
         pack_desc(out.dir)[[1L]]$Version)
       msg <- sprintf(" archive file '%s'...", pkg.file)
     }

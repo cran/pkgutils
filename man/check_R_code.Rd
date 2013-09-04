@@ -1,6 +1,9 @@
 \name{check_R_code}
 \alias{check_R_code}
 \alias{check_R_code.character}
+\alias{logfile}
+\alias{logfile.NULL}
+\alias{logfile.character}
 \title{Check R code files}
 \usage{
   check_R_code(x, ...)
@@ -10,8 +13,25 @@
     ops = TRUE, parens = TRUE, assign = TRUE,
     modify = FALSE, ignore = NULL, accept.tabs = FALSE,
     three.dots = TRUE, what = "R", encoding = "", ...)
+
+  logfile(x)
+
+  \method{logfile}{NULL} (x)
+
+  \method{logfile}{character} (x)
 }
 \arguments{
+  \item{x}{For \code{check_r_code}, a character vector of
+  names of input files, or names of \R package directories.
+  The latter will be expanded as appropriate. \code{x} is
+  passed to \code{\link{pkg_files}} with the
+  \sQuote{installed} argument set to \code{FALSE}. See
+  there for further details.
+
+  For \code{logfile}, a character scalar for setting the
+  logfile, or \code{NULL} for getting the current value.
+  Use an empty string to turn logging off.}
+
   \item{lwd}{Numeric scalar. Maximum line width allowed.
   Set this to a reasonably large number to effectively turn
   checking off.}
@@ -63,35 +83,32 @@
   \item{encoding}{Character scalar passed as
   \sQuote{.encoding} argument to \code{\link{map_files}}.}
 
-  \item{...}{Optional arguments passed to
+  \item{ignore}{Passed to \code{\link{pkg_files}}. See
+  there for details.}
+
+  \item{...}{Optional other arguments passed to
   \code{\link{pkg_files}}.}
-
-  \item{x}{Character vector of names of input files, or
-  names of \R package directories. The latter will be
-  expanded as appropriate. \code{x} is passed to
-  \code{\link{pkg_files}} with the \sQuote{installed}
-  argument set to \code{FALSE}. See there for further
-  details.}
-
-  \item{ignore}{\code{NULL} or character vector with names
-  of files to ignore.  Passed to \code{\link{pkg_files}},
-  see there for details of how names are matched.}
 }
 \value{
-  Logical vector; see \code{\link{map_files}} for details.
-  Here the result is returned invisibly. As a side effect,
-  problem messages are printed to \code{stderr}. See
-  \code{\link{logfile}} for how to send these messages to a
-  file.
+  \code{check_R_code} yields a logical vector; see
+  \code{\link{map_files}} for details. Here the result is
+  returned invisibly.  As a side effect, problem messages
+  are printed to \code{stderr}. See \code{\link{logfile}}
+  for how to send these messages to a file.
+
+  \code{logfile} returns a character scalar with the name
+  of the current logfile.
 }
 \description{
   Check certain aspects of the format of \R code files in
   the \sQuote{R} subdirectory of a package (or of any other
-  kinds of files).
+  kinds of files). Optionally write descriptions of
+  problems to the logfile used by \pkg{pkgutils}, which can
+  be set using \code{logfile}.
 }
 \details{
-  This function is intended to ensure a consistent and
-  readable \R coding style. Not all problems can be
+  \code{check_R_code} is intended to ensure a consistent
+  and readable \R coding style. Not all problems can be
   checked, however. For instance, \code{+} and \code{-} are
   binary as well as unary operators and should either be
   followed by spaces or not, respectively. Yielding no
@@ -102,6 +119,11 @@
   made line-per-line throughout. In addition to such false
   negatives, \code{check_R_code} falsely complains about
   numbers in exponential notation.
+
+  Functions such as \code{\link{check_keywords}} print
+  detected problems, if any, using \code{message}. These
+  character vectors can also be safed by appending to a
+  logfile.
 }
 \examples{
 # Checking the R scripts that come with the package
@@ -117,6 +139,14 @@ if (length(scripts)) {
 # '--blank', '--jspaces', '--width', '--assignoff', '--commaoff',
 # '--opsoff', '--modify', '--good', '--parensoff', '--Rcheck', '--tabs' and
 # '--untidy'. Checking can be turned off generally or specifically.
+
+## logfile()
+old <- logfile()
+new <- tempfile()
+logfile(new)
+stopifnot(new == logfile())
+logfile(old)
+stopifnot(old == logfile())
 }
 \seealso{
   Other package-functions: \code{\link{copy_pkg_files}},
@@ -124,9 +154,9 @@ if (length(scripts)) {
     \code{\link{is_pkg_dir}},
     \code{\link{pack_desc}},
     \code{\link{pkg_files}},
-    \code{\link{repair_S4_docu}},
     \code{\link{run_R_CMD}},
     \code{\link{swap_code}},
   }
+\keyword{IO}
 \keyword{package}
 

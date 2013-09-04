@@ -9,11 +9,14 @@ pkg <- "pkgutils"
 ################################################################################
 
 
-must_be <- function(x, y) stopifnot(identical(x, y))
+must_be <- function(got, wanted) if (!identical(got, wanted))
+  stop("'got' not identical to 'wanted'")
 
-must_fail <- function(expr) {
-  stopifnot(inherits(try(expr, silent = TRUE), "try-error"))
-}
+must_fail <- function(expr) if (tryCatch({
+      expr
+      TRUE
+    }, error = function(e) FALSE))
+  stop("evaluating 'expr' did not fail")
 
 
 ################################################################################

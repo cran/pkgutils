@@ -49,7 +49,7 @@ read_and_create_unique_names <- function(files, options) {
   ok[[1L]] <- options$xcolumn
   for (i in seq_along(cn)) {
     if (any(bad <- !nzchar(cn[[i]]))) # merge() crashes with empty column names
-      colnames(data[[i]])[bad] <- sprintf("%s.%i", suffixes[i], 
+      colnames(data[[i]])[bad] <- sprintf("%s.%i", suffixes[i],
         seq_along(cn[[i]])[bad])
     twice <- cn[[i]] %in% setdiff(unlist(cn[-i]), ok[[i]])
     colnames(data[[i]])[twice] <- sprintf("%s.%s", cn[[i]][twice], suffixes[i])
@@ -85,7 +85,7 @@ to_numbered_header <- function(x) {
 option.parser <- OptionParser(option_list = list(
 
   make_option(c("-a", "--all"), action = "store_true",
-    help = "Keep non-matching lines of file 2, too [default: %default]", 
+    help = "Keep non-matching lines of file 2, too [default: %default]",
     default = FALSE),
 
   make_option(c("-b", "--bald"), action = "store_true",
@@ -97,7 +97,7 @@ option.parser <- OptionParser(option_list = list(
     default = FALSE),
 
   make_option(c("-d", "--delete"), action = "store_true",
-    help = "Delete non-matching lines of file 1 [default: %default]", 
+    help = "Delete non-matching lines of file 1 [default: %default]",
     default = FALSE),
 
   make_option(c("-e", "--encoding"), type = "character",
@@ -105,11 +105,11 @@ option.parser <- OptionParser(option_list = list(
     metavar = "NAME", default = ""),
 
   make_option(c("-j", "--join-by"), type = "character",
-    help = "Join character(s) for vertical merging mode [default: '%default']",
+    help = "Join character(s) for -r/-v [default: '%default']",
     metavar = "SEP", default = "; "),
 
   make_option(c("-k", "--keep"), action = "store_true",
-    help = "Keep whitespace surrounding the separators [default: %default]", 
+    help = "Keep whitespace surrounding the separators [default: %default]",
     default = FALSE),
 
   make_option(c("-n", "--names"), action = "store_true",
@@ -124,6 +124,10 @@ option.parser <- OptionParser(option_list = list(
     help = "Field separator in CSV files [default: '%default']",
     metavar = "SEP", default = "\t"),
 
+  make_option(c("-r", "--rows"), action = "store_true",
+    help = "Merge each row horizontally, file by file [default: %default]",
+    default = FALSE),
+
   make_option(c("-u", "--unquoted"), action = "store_true",
     help = "Do not quote fields in output [default: %default]",
     default = FALSE),
@@ -136,7 +140,7 @@ option.parser <- OptionParser(option_list = list(
     help = "Name of the merge column in file 1 [default: '%default']",
     default = COLUMN_DEFAULT_NAME, metavar = "COLUMN"),
 
-  make_option(c("-y", "--ycolumn"), type = "character", 
+  make_option(c("-y", "--ycolumn"), type = "character",
     help = "Name of the merge column in file 2 [default: like file 1]",
     default = "", metavar = "COLUMN")
 
@@ -175,9 +179,26 @@ if (opt$bald) {
 #
 
 
-if (opt$help || (length(files) + opt$vertical) < 2L) {
+if (opt$help || (length(files) + (opt$vertical || opt$rows)) < 2L) {
   print_help(option.parser)
   quit(status = 1L)
+}
+
+
+################################################################################
+#
+# horizontal merging of rows
+#
+
+
+if (opt$rows) {
+  for (file in files) {
+    x <- do_read(file, opt)
+    x <- apply(x, 1L,
+      function(x) listing(x[nzchar(x)], style = "%s: %s", collapse = opt$join))
+    do_write(x, opt)
+  }
+  quit(status = 0L)
 }
 
 
@@ -189,8 +210,9 @@ if (opt$help || (length(files) + opt$vertical) < 2L) {
 
 if (opt$vertical) {
   for (file in files) {
-    x <- aggregate(do_read(file, opt), by = list(x[[opt$xcolumn]]),
-      FUN = join_unique, join = opt$join, simplify = TRUE)
+    x <- do_read(file, opt)
+    x <- aggregate(x, by = list(x[, opt$xcolumn]), FUN = join_unique,
+      join = opt$join, simplify = TRUE)
     do_write(x[, -1L, drop = FALSE], opt)
   }
   quit(status = 0L)
@@ -207,14 +229,15 @@ data <- read_and_create_unique_names(files, opt)
 
 x <- data[[1L]]
 for (i in seq_along(data)[-1L])
-  x <- merge(x, data[[i]], by.x = opt$xcolumn, by.y = opt$ycolumn, 
+  x <- merge(x, data[[i]], by.x = opt$xcolumn, by.y = opt$ycolumn,
     all.x = !opt$delete, all.y = opt$all, sort = !opt$conserve)
 
 if (opt$conserve) {
-  previous <- data[[1L]][, opt$xcolumn]
-  if (setequal(previous, x[, opt$xcolumn])) {
-    rownames(x) <- x[, opt$xcolumn]
-    x <- x[as.character(previous), , drop = FALSE]
+  found <- match(previous <- data[[1L]][, opt$xcolumn], x[, opt$xcolumn], 0L)
+  if (all(found > 0L) && all(x[, opt$xcolumn] %in% previous)) {
+    # appending the row index avoids duplicate row names
+    rownames(x) <- paste(x[, opt$xcolumn], seq.int(nrow(x)))
+    x <- x[paste(previous, found), , drop = FALSE]
     rownames(x) <- NULL
   }
 }

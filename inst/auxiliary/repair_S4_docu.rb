@@ -96,11 +96,10 @@ class S4_Method
     
     
     def register_rd_file_mapping str #:nodoc:
-      fields = str.split
-      RD_FILE_MAP[fields.fetch 0] = fields.fetch 1 do
-        raise Format_Problem, str.to_s
-      end
-      warn fields.join(" => ")
+      from, to = str.split
+      raise Format_Problem, str.to_s if to.nil?
+      RD_FILE_MAP[from] = to
+      warn "MAPPING: #{from} => #{to}"
     end
 
 
@@ -190,11 +189,15 @@ private
 
 
   def cleaned_name # :nodoc:
-    RD_FILE_MAP[case @name
+    case @name
     when '['
       'bracket'
     when '[['
       'double.bracket'
+    when '[<-'
+      'bracket.set'
+    when '[[<-'
+      'double.bracket.set'
     when /<-$/
       @name.sub(/<-$/, ".set")
     when '+'
@@ -207,7 +210,7 @@ private
       "infix.large#{@name.gsub(/\W/, "").downcase}"
     else
       @name
-    end]
+    end
   end
 
 
@@ -227,7 +230,7 @@ private
 
 
   def obvious_rd_file # :nodoc:
-    File.join man_dir, "#{cleaned_name}.Rd"
+    File.join man_dir, "#{RD_FILE_MAP[cleaned_name]}.Rd"
   end
 
 
@@ -368,10 +371,15 @@ class Hash
       warn "Adding to #{rdfile}" if args[:verbose]
       File.open(rdfile, "a") do |file|
         file.puts s4_methods.first.doctype
-        generic = true
+        generic, current = true, s4_methods.first.name
         s4_methods.each do |s4_method|
           file.puts s4_method.aliases(generic)
-          generic = false
+          if s4_method.name != current
+            generic = true
+            current = s4_method.name
+          else
+            generic = false
+          end
         end
         file.puts s4_methods.first.usage(:start)
         s4_methods.each do |s4_method|

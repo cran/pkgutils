@@ -3,30 +3,55 @@
 ################################################################################
 
 
-#' Change working directory
+#' Change or list working directories
 #'
-#' Set the working directory to, e.g., a parent directory of the current one,
-#' or to a directory visited earlier. This is mainly a convenience function for
-#' interactive sessions.
+#' Set the working directory to, e.g., a parent directory of the current one, or
+#' to a directory visited earlier. Alternatively, list the working directories
+#' stored by using \code{\link{swd}}, or just the current working directory if
+#' \code{\link{swd}} has not been called yet. These is mainly convenience
+#' functions for interactive sessions.
 #'
-#' @param x Numeric scalar indicating how often to move upwards (i.e., to which
-#'   parent directory, or character vector containing directory names, or
-#'   \code{NULL}. If \code{x} is a negative number, this
-#'   is used to go to one of the working directories used earlier, using an
-#'   internally stored directory list. If \code{x} is a character vector, its
-#'   elements passed in turn to \code{setwd}.
-#' @details The directory stack registers a new directory only via calls to
-#'   \code{swd} itself, not via \code{setwd}.
-#' @note If \code{n} is a numeric scalar, the action of \code{swd(n)} is not
-#'   necessarily the inverse of what \code{swd(-n)} is doing.
+#' @param x For \code{swd}, a numeric scalar indicating how often to move
+#'   upwards (i.e., to which parent directory, or character vector containing
+#'   directory names, or \code{NULL}. If \code{x} is a negative number, this is
+#'   used to go to one of the working directories used earlier, using an
+#'   internally stored directory list. That is, if \code{n} is a numeric scalar,
+#'   the action of \code{swd(n)} is not necessarily the inverse of what
+#'   \code{swd(-n)} is doing.
+#'
+#'   If \code{x} is a character vector, its elements passed in turn to
+#'   \code{setwd}.
+#'
+#'   For \code{listwd}, \code{x} is an optional numeric scalar indicating how
+#'   many directories (maximally) to show. The default is 10.
 #' @export
-#' @return \code{NULL}, returned invisibly. As a side effect, the name of the
-#'   resulting working directory is printed. This is the only action if
-#'   \code{x} is \code{NULL}.
+#' @return \code{swd} yields \code{NULL}, returned invisibly. As a side effect,
+#'   the name of the resulting working directory is printed. This is the only
+#'   action if \code{x} is \code{NULL}. The directory stack registers a new
+#'   directory only via calls to \code{swd} itself, not via \code{setwd}.
+#'
+#'   For \code{listwd}, a character vector with directory names (current one
+#'   last), returned invisibly. As a side effect, the list of at most \code{x}
+#'   last directories is printed together with the numeric indexes that would be
+#'   needed to set them using \code{\link{swd}}, respectively.
+#'
 #' @keywords environment
 #' @seealso base::setwd base::getwd
 #' @family directory-functions
 #' @examples
+#'
+#' ## listwd()
+#' (d1 <- getwd())
+#' x <- listwd()
+#' stopifnot(x == d1)
+#' swd(1)
+#' x <- listwd()
+#' stopifnot(x == c(d1, dirname(d1)))
+#' swd(-1)
+#' x <- listwd()
+#' stopifnot(x == c(d1, dirname(d1), d1))
+#'
+#' ## swd()
 #' (d1 <- getwd())
 #' swd(1) # got to immediate parent directory
 #' stopifnot(d1 != getwd(), dirname(d1) == getwd())
@@ -82,49 +107,23 @@ swd.numeric <- function(x) {
     wd.index <- DIRS$WD_INDEX + x
     y <- DIRS[[sprintf("WD_%i", wd.index)]]
   }
-  swd(y)
+  swd.character(y)
 }
 
-
-################################################################################
-
-
-#' List the working directories
-#'
-#' List the working directories stored by using \code{\link{swd}}, or just the
-#' current working directory if \code{\link{swd}} has not been called yet.
-#'
-#' @param x Numeric scalar indicating how many directories (maximally) to show.
+#' @rdname swd
 #' @export
-#' @return Character vector with directory names (current one last), returned
-#'   invisibly. As a side effect, the list of at most \code{x} last directories
-#'   is printed together with the numeric indexes that would be needed to set
-#'   them using \code{\link{swd}}, respectively.
-#' @keywords environment
-#' @seealso base::setwd base::getwd
-#' @family directory-functions
-#' @examples
-#' d1 <- getwd()
-#' x <- listwd()
-#' stopifnot(x == d1)
-#' swd(1)
-#' x <- listwd()
-#' stopifnot(x == c(d1, dirname(d1)))
-#' swd(-1)
-#' x <- listwd()
-#' stopifnot(x == c(d1, dirname(d1), d1))
 #'
 listwd <- function(x) UseMethod("listwd")
 
-#' @rdname listwd
+#' @rdname swd
 #' @method listwd NULL
 #' @export
 #'
 listwd.NULL <- function(x) {
-  listwd(10)
+  listwd.numeric(10)
 }
 
-#' @rdname listwd
+#' @rdname swd
 #' @method listwd numeric
 #' @export
 #'
@@ -139,7 +138,4 @@ listwd.numeric <- function(x) {
 
 
 ################################################################################
-
-
-
 

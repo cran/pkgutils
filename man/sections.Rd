@@ -105,7 +105,9 @@ stopifnot(identical(y, list(`1` = x[3], `2` = x[5:6])))
 }
 \seealso{
   base::split base::grepl
-}
+
+  Other character-functions: \code{\link{map_files}},
+  }
 \keyword{character}
 \keyword{utilities}
 

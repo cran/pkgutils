@@ -74,10 +74,7 @@ stopifnot(!x)
 \seealso{
   base::readLines base::writeLines base::identity
 
-  Other auxiliary-functions: \code{\link{L}},
-  \code{\link{LL}}, \code{\link{case}},
-    \code{\link{flatten}},   \code{\link{listing}},
-          \code{\link{logfile}},   \code{\link{must}},
-  \code{\link{run_ruby}},     }
+  Other character-functions: \code{\link{sections}},
+    }
 \keyword{IO}
 

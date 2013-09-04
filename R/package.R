@@ -3,13 +3,16 @@
 ################################################################################
 
 
-#' Operate on package description files
+#' List or modify package (description) files
 #'
-#' Read the \sQuote{DESCRIPTION} file of an \R package. Optionally also
-#' set the \sQuote{Date} entry to the current date, and if requested increment
-#' the subversion number of the package version, if any, and write the data
-#' back to each input file. Alternatively, call \code{source} on all \R code
-#' files of a package as listed in the \sQuote{DESCRIPTION} file.
+#' \code{pack_desc} reads the \sQuote{DESCRIPTION} file of an \R package.
+#' Optionally it sets the \sQuote{Date} entry to the current date, and if
+#' requested increment the subversion number of the package version, if any, and
+#' write the data back to each input file. Alternatively, call \code{source} on
+#' all \R code files of a package as listed in the \sQuote{DESCRIPTION} file.
+#' \code{pkg_files} lists files within given subdirectories of a package. It
+#' works on either installed packages or package source folders.
+#' \code{is_pkg_dir} determines whether names refer to such package directories.
 #'
 #' @param pkg Name(s) of one to several package directories. The package name
 #'   alone does \strong{not} suffice unless the package is a subdirectory
@@ -27,10 +30,27 @@
 #'   date of the package.
 #' @param envir Environment used when sourceing files. Only relevant if
 #'   \code{action} is set to \sQuote{source}.
+#'
+#' @param x Character vector. For \code{pkg_files}, if \code{installed} is
+#'   \code{TRUE}, the names of installed packages. Otherwise names of package
+#'   directories, which are expanded automatically, and/or directly the names of
+#'   files, which may or may not reside within a package. The directory must be
+#'   recognizable by \code{is_pkg_dir} for the expansion to work. For
+#'   \code{is_pkg_dir}, an arbitrary character vector.
+#' @param what Character vector. The subdirectories to list.
+#' @param installed Logical scalar. If \code{TRUE}, the package(s) are searched
+#'   using \code{find.package}. Otherwise \code{pkg} is treated as list of
+#'   directories and/or file names, distinguished using
+#'   \code{is_pkg_dir}.
+#' @param ignore \code{NULL} or a character vector of file names (without their
+#'   directory-name parts) to remove from the result. Matching is done case-
+#'   insensitively. Ignored if empty.
+#'
 #' @param ... Optional arguments passed to and from other methods, or between
 #'   the methods.
 #' @export
-#' @return The returned value depends on the value of \code{action}:
+#' @return The value returned by \code{pack_desc} depends on the value of
+#'   \code{action}:
 #'   \describe{
 #'     \item{read}{Object of class \sQuote{pack_descs}, basically a nested
 #'       list with \code{pkg} as names. The values are objects of class
@@ -46,10 +66,18 @@
 #'       \code{source} results is obtained, returned invisibly. \code{\dots} is
 #'       passed to \code{source} if \code{demo} is \code{FALSE}.}
 #'   }
+#'
+#'   \code{pkg_files} yields a character vector of file names (empty if no such
+#'   files are found).
+#'
+#'   \code{is_pkg_dir} yields a logical vector with the same length than
+#'   \code{x}.
+#'
 #' @family package-functions
 #' @keywords package
 #' @seealso base::read.dcf base::write.dcf base::source
-#' @seealso utils::packageDescription
+#'   base::list.files base::find.package base::system.file
+#'   utils::packageDescription
 #' @examples
 #'
 #' pkg <- find.package(c("tools", "utils"), quiet = TRUE)
@@ -74,6 +102,17 @@
 #'
 #' # See also the 'docu.R' script, options '--format' and '--keep'.
 #'
+#' ## pkg_files()
+#' pkg <- find.package(c("tools", "utils"), quiet = TRUE)
+#' (x <- pkg_files(pkg, "R"))
+#' stopifnot(is.character(x), length(x) == 6)
+#'
+#' ## is_pkg_dir()
+#' (x <- is_pkg_dir(c("foo", "bar", "baz")))
+#' stopifnot(!x)
+#' (x <- is_pkg_dir(find.package(c("tools", "utils"), quiet = TRUE)))
+#' stopifnot(x)
+#'
 pack_desc <- function(pkg, ...) UseMethod("pack_desc")
 
 #' @rdname pack_desc
@@ -86,20 +125,20 @@ pack_desc.character <- function(pkg, action = c("read", "update", "source"),
   LL(version, demo, date.format)
   x <- lapply(normalizePath(file.path(pkg, "DESCRIPTION")), function(file) {
     stopifnot(nrow(y <- read.dcf(file)) == 1L)
-    structure(.Data = as.list(y[1L, ]), file = file,
+    structure(as.list(y[1L, ]), file = file,
       class = c("pack_desc", "packageDescription"))
   })
-  x <- structure(.Data = x, .Names = pkg, class = "pack_descs")
+  x <- structure(x, names = pkg, class = "pack_descs")
   case(match.arg(action),
     read = x,
     update = {
       x <- update(object = x, version = version, date.format = date.format)
       if (!demo)
-        puts(x = x, file = vapply(x, attr, character(1L), which = "file"), ...)
+        puts(x = x, file = vapply(x, attr, "", which = "file"), ...)
       wanted <- "Date"
       if (version)
         wanted <- c(wanted, "Version")
-      x <- lapply(wanted, function(i) vapply(x, `[[`, character(1L), i = i))
+      x <- lapply(wanted, function(i) vapply(x, `[[`, "", i = i))
       x <- do.call(cbind, x)
       colnames(x) <- wanted
       x
@@ -108,94 +147,12 @@ pack_desc.character <- function(pkg, action = c("read", "update", "source"),
   )
 }
 
-
-################################################################################
-
-
-#' Run R CMD
-#'
-#' Externally call \sQuote{R CMD}, e.g. for checking \R packages.
-#'
-#' @param x Character vector with arguments passed to \sQuote{R CMD <what>}. If
-#'   these are the names of one to several package directories, the package
-#'   name alone does \strong{not} suffice unless the package is a subdirectory
-#'   of the working directory.
-#' @param what Character scalar. The name of the subcommand of \sQuote{R CMD}.
-#' @param ... Optional command-line switches passed to \sQuote{R CMD <what>}.
-#'   In contrast to \code{x}, leading dashes are automatically prepended as
-#'   necessary.
-#' @param sudo Logical scalar. Prepend \sQuote{sudo} to the command? Probably
-#'   makes only sense on UNIX-like systems.
-#' @param system.args Optional list of arguments passed to \code{system} from
-#'   the \pkg{base} package.
-#' @details Windows users might need to install \sQuote{Rtools} for this to
-#'   work, see \url{http://cran.r-project.org/bin/windows/Rtools/}.
+#' @rdname pack_desc
 #' @export
-#' @return The return value of the call of \sQuote{R CMD}, depending on
-#'   \code{system.args}, by default an integer indicating success or failure.
-#' @family package-functions
-#' @keywords package
-#' @seealso base::system
-#' @examples
-#' # See the 'docu.R' script provided with this package, options '--check',
-#' # '--install' and '--yes'.
-#'
-run_R_CMD <- function(x, ...) UseMethod("run_R_CMD")
-
-#' @rdname run_R_CMD
-#' @method run_R_CMD character
-#' @export
-#'
-run_R_CMD.character <- function(x, what = "check", ...,
-    sudo = identical(what, "INSTALL"), system.args = list()) {
-  r.exe <- Sys.which("R")
-  r.exe <- r.exe[nzchar(r.exe)]
-  LL(what, sudo, r.exe)
-  pat <- "%s --vanilla CMD %s %s %s"
-  if (sudo)
-    pat <- paste("sudo", pat)
-  args <- paste(prepare_options(unlist(c(...))), collapse = " ")
-  cmd <- sprintf(pat, r.exe, what, args, paste(x, collapse = " "))
-  do.call(system, c(list(command = cmd), system.args))
-}
-
-
-################################################################################
-
-
-#' Find files within package subdirectories
-#'
-#' List files within given subdirectories of a package.
-#'
-#' @inheritParams pack_desc
-#' @param x Character vector. If \code{installed} is \code{TRUE}, the names
-#'   of installed packages. Otherwise names of package directories, which are
-#'   expanded automatically, and/or directly the names of files, which may or
-#'   may not reside within a package. The directory must be recognizable by
-#'   \code{\link{is_pkg_dir}} for the expansion to work.
-#' @param what Character vector. The subdirectories to list.
-#' @param installed Logical scalar. If \code{TRUE}, the package(s) are searched
-#'   using \code{find.package}. Otherwise \code{pkg} is treated as list of
-#'   directories and/or file names, distinguished using
-#'   \code{\link{is_pkg_dir}}.
-#' @param ignore \code{NULL} or a character vector of file names (without their
-#'   directory-name parts) to remove from the result. Matching is done case-
-#'   insensitively. Ignored if empty.
-#' @details The character method passes \code{\dots} to \code{list.files} from
-#'   the \pkg{base} package.
-#' @export
-#' @return Character vector of file names. Empty if no such files are found.
-#' @family package-functions
-#' @keywords package
-#' @seealso base::list.files base::find.package base::system.file
-#' @examples
-#' pkg <- find.package(c("tools", "utils"), quiet = TRUE)
-#' (x <- pkg_files(pkg, "R"))
-#' stopifnot(is.character(x), length(x) == 6)
 #'
 pkg_files <- function(x, ...) UseMethod("pkg_files")
 
-#' @rdname pkg_files
+#' @rdname pack_desc
 #' @method pkg_files character
 #' @export
 #'
@@ -222,33 +179,123 @@ pkg_files.character <- function(x, what, installed = TRUE, ignore = NULL,
     filter(x)
 }
 
+#' @rdname pack_desc
+#' @export
+#'
+is_pkg_dir <- function(x) UseMethod("is_pkg_dir")
+
+#' @rdname pack_desc
+#' @method is_pkg_dir character
+#' @export
+#'
+is_pkg_dir.character <- function(x) {
+  result <- file_test("-d", x)
+  result[result] <- file_test("-f", file.path(x[result], "DESCRIPTION"))
+  result
+}
+
 
 ################################################################################
 
 
-#' Copy packages files
+#' Run R CMD
 #'
-#' Copy package files after installation. This is mainly intended for script
-#' files, which should be placed in a directory for executables.
+#' Externally call \sQuote{R CMD}, e.g. for checking or installing \R packages,
+#' or conduct some postprecessing after checking or installation.
 #'
 #' @inheritParams pkg_files
-#' @param what Character vector with the names of subdirectories to copy.
+#'
+#' @param x For \code{run_R_CMD}, a character vector with arguments passed to
+#'   \sQuote{R CMD <what>}. If these are the names of one to several package
+#'   directories, the package name alone does \strong{not} suffice unless the
+#'   package is a subdirectory of the working directory.
+#'
+#'   For \code{copy_pkg_files} and \code{delete_o_files}, a character vector
+#'   passed as eponymous argument to \code{\link{pkg_files}}.
+#'
+#' @param what Character scalar with the name of the subcommand of \sQuote{R
+#'   CMD}, or (for \code{copy_pkg_files}) a character vector with the names of
+#'   subdirectories to copy.
+#' @param sudo Logical scalar. Prepend \sQuote{sudo} to the command? Probably
+#'   makes only sense on UNIX-like systems.
+#' @param system.args Optional list of arguments passed to \code{system} from
+#'   the \pkg{base} package.
+#'
 #' @param to Character vector indicating the target folder(s) or file(s).
 #' @param overwrite Logical scalar passed to \code{file.copy} from the
 #'   \pkg{base} package (in addition to \code{from} and \code{to}).
-#' @param ... Optional arguments passed to the same function.
+#'
+#' @param ext Character vector with file extensions to consider. Need not
+#'   contain the leading dot. Content of \code{.Platform$dynlib.ext} is added
+#'   automatically.
+#'
+#' @param ... For \code{run_R_CMD}, optional command-line switches passed to
+#'   \sQuote{R CMD <what>}. In contrast to \code{x}, leading dashes are
+#'   automatically prepended as necessary. For \code{copy_pkg_files}, optional
+#'   arguments passed to \code{file.copy} from the \pkg{base} package.
+#'
+#' @return The return value of \code{run_R_CMD} is the one of the call of
+#'   \sQuote{R CMD}, depending on \code{system.args}, by default an integer
+#'   indicating success or failure.
+#'
+#'   \code{copy_pkg_files} returns a logical vector. See \code{file.copy} from
+#'   the \pkg{base} package for details.
+#'
+#'   \code{delete_o_files} also returns a logical vector, this time indicating
+#'   whether deletion succeeded. See \code{file.remove} from the \pkg{base}
+#'   package.
+#'
+#' @details Windows users might need to install \sQuote{Rtools} for
+#'   \code{run_R_CMD} to work, see
+#'   \url{http://cran.r-project.org/bin/windows/Rtools/}.
+#'
+#'   \code{copy_pkg_files} copies package files after installation. This is
+#'   mainly intended for script files, which should often be placed in a
+#'   directory for executables. The \sQuote{docu.R} and \sQuote{merge.R} scripts
+#'   that come with the \pkg{pkgutils} package are examples for such files.
+#'
+#'   \code{delete_o_files} removes object files in the \sQuote{src} subdirectory
+#'   of a package remaining from previous compilation attempts, if any.
+#'
 #' @export
-#' @return Logical vector. See \code{file.copy} from the \pkg{base} package.
 #' @family package-functions
 #' @keywords package
-#' @seealso base::file.copy
+#' @seealso base::system base::file.copy base::file.remove
 #' @examples
-#' # See the 'docu.R' script provided with this package, options '--target' and
-#' # '--exclude'.
+#' # Running R CMD <what>: see the 'docu.R' script provided with this package,
+#' # options '--check', # '--install' and '--yes'.
+#'
+#' # Copying files: see the 'docu.R' script provided with this package, options
+#' # '--target' and '--exclude'.
+#'
+#' # Deleting object files: see the 'docu.R' script provided with this package,
+#' # option '--zapoff'.
+#'
+run_R_CMD <- function(x, ...) UseMethod("run_R_CMD")
+
+#' @rdname run_R_CMD
+#' @method run_R_CMD character
+#' @export
+#'
+run_R_CMD.character <- function(x, what = "check", ...,
+    sudo = identical(what, "INSTALL"), system.args = list()) {
+  r.exe <- Sys.which("R")
+  r.exe <- r.exe[nzchar(r.exe)]
+  LL(what, sudo, r.exe)
+  pat <- "%s --vanilla CMD %s %s %s"
+  if (sudo)
+    pat <- paste("sudo", pat)
+  args <- paste0(prepare_options(unlist(c(...))), collapse = " ")
+  cmd <- sprintf(pat, r.exe, what, args, paste0(x, collapse = " "))
+  do.call(system, c(list(command = cmd), system.args))
+}
+
+#' @rdname run_R_CMD
+#' @export
 #'
 copy_pkg_files <- function(x, ...) UseMethod("copy_pkg_files")
 
-#' @rdname copy_pkg_files
+#' @rdname run_R_CMD
 #' @method copy_pkg_files character
 #' @export
 #'
@@ -259,44 +306,24 @@ copy_pkg_files.character <- function(x, what = "scripts",
   file.copy(from = files, to = to, overwrite = overwrite, ...)
 }
 
-
-################################################################################
-
-
-#' Repair S4 documentation in Rd files
-#'
-#' Check examples in Rd files. They should not be present if \sQuote{keywords}
-#' contain \sQuote{internal} and be present otherwise, unless \sQuote{docType}
-#' is \sQuote{class} or \sQuote{package}.
-#'
-#' @param x Character vector of names of input files, or names of \R package
-#'   directories. The latter will be expanded as appropriate. \code{x} is
-#'   passed to \code{\link{pkg_files}} with the \sQuote{installed} argument
-#'   set to \code{FALSE}. See there for further details.
-#' @param ... Optional arguments, currently passed as arguments additional to
-#'   \sQuote{x} to \code{\link{run_ruby}}. See there for details.
-#' @param ignore \code{NULL} or character vector with names of files to ignore.
-#'   Passed to \code{\link{pkg_files}}, see there for details of how names
-#'   are matched.
-#' @return Currently the return value of the call to \code{\link{run_ruby}}.
-#' @details This reparation process is currently implemented in a Ruby script
-#'   that comes with the package. It is automatically found in the installation
-#'   directory but fails if a suitable version of Ruby, i.e. \eqn{\ge 1.9.0},
-#'   is unavailable. See \code{\link{run_ruby}} for further details.
-#' @export
-#' @family package-functions
-#' @keywords package
-#' @examples
-#' # See the 'docu.R' script provided with the package, option '--s4methods'.
-#'
-repair_S4_docu <- function(x, ...) UseMethod("repair_S4_docu")
-
-#' @rdname repair_S4_docu
-#' @method repair_S4_docu character
+#' @rdname run_R_CMD
 #' @export
 #'
-repair_S4_docu.character <- function(x, ..., ignore = NULL) {
-  run_pkgutils_ruby(x = x, script = "repair_S4_docu.rb", ignore = ignore, ...)
+delete_o_files <- function(x, ...) UseMethod("delete_o_files")
+
+#' @rdname run_R_CMD
+#' @method delete_o_files character
+#' @export
+#'
+delete_o_files.character <- function(x, ext = "o", ignore = NULL, ...) {
+  ext <- tolower(c(ext, .Platform$dynlib.ext))
+  ext <- unique.default(tolower(sub("^\\.", "", ext, perl = TRUE)))
+  ext <- sprintf("\\.(%s)$", paste0(ext, collapse = "|"))
+  x <- pkg_files(x, what = "src", installed = FALSE, ignore = ignore, ...)
+  if (length(x <- x[grepl(ext, x, perl = TRUE, ignore.case = TRUE)]))
+    file.remove(x)
+  else
+    logical()
 }
 
 
@@ -321,8 +348,10 @@ repair_S4_docu.character <- function(x, ..., ignore = NULL) {
 #'   valid in its context, or correct or useful code. For instance, the line
 #'   \samp{  SEALED <- FALSE #|| SEALED <- TRUE} would be modified to
 #'   \samp{  SEALED <- TRUE #|| SEALED <- FALSE}, i.e. this could be used to
-#'   change a package constant before conducting any checking.
-#' @note This preprocessing is currently implemented in a Ruby script
+#'   change a package constant before conducting any checking. Note, hovewer,
+#'   that lines starting with a \pkg{roxygen2} comment will not be modified.
+#'
+#'   This preprocessing is currently implemented in a Ruby script
 #'   that comes with the package. It is automatically found in the installation
 #'   directory but fails if a suitable version of Ruby, i.e. \eqn{\ge 1.9.0},
 #'   is unavailable. See \code{\link{run_ruby}} for details.
@@ -346,82 +375,22 @@ swap_code.character <- function(x, ..., ignore = NULL) {
 ################################################################################
 
 
-#' Check for package directory
-#'
-#' Check whether a name refers to a package directory.
-#'
-#' @param x Character vector.
-#' @export
-#' @return Logical vector with the same length than \code{x}.
-#' @keywords package
-#' @family package-functions
-#' @examples
-#' (x <- is_pkg_dir(c("foo", "bar", "baz")))
-#' stopifnot(!x)
-#' (x <- is_pkg_dir(find.package(c("tools", "utils"), quiet = TRUE)))
-#' stopifnot(x)
-#'
-is_pkg_dir <- function(x) UseMethod("is_pkg_dir")
-
-#' @rdname is_pkg_dir
-#' @method is_pkg_dir character
-#' @export
-#'
-is_pkg_dir.character <- function(x) {
-  result <- file_test("-d", x)
-  result[result] <- file_test("-f", file.path(x[result], "DESCRIPTION"))
-  result
-}
-
-
-################################################################################
-
-
-#' Delete object files
-#'
-#' If present, delete object files in the \sQuote{src} subdirectory of a
-#' package remaining from previous compilation attempts.
-#'
-#' @inheritParams repair_S4_docu
-#' @param ext Character vector with file extensions to consider. Need not
-#'   contain the leading dot. Content of \code{.Platform$dynlib.ext} is added
-#'   automatically
-#' @return Logical vector indicating whether deletion succeeded. See
-#'   \code{file.remove} from the \pkg{base} package.
-#' @keywords package
-#' @seealso base::file.remove
-#' @family package-functions
-#' @export
-#' @examples
-#' # See the 'docu.R' script provided with this package, option '--zapoff'.
-#'
-delete_o_files <- function(x, ...) UseMethod("delete_o_files")
-
-#' @rdname delete_o_files
-#' @method delete_o_files character
-#' @export
-#'
-delete_o_files.character <- function(x, ext = "o", ignore = NULL, ...) {
-  ext <- tolower(c(ext, .Platform$dynlib.ext))
-  ext <- unique.default(tolower(sub("^\\.", "", ext, perl = TRUE)))
-  ext <- sprintf("\\.(%s)$", paste(ext, collapse = "|"))
-  x <- pkg_files(x, what = "src", installed = FALSE, ignore = ignore, ...)
-  if (length(x <- x[grepl(ext, x, perl = TRUE, ignore.case = TRUE)]))
-    file.remove(x)
-  else
-    logical()
-}
-
-
-################################################################################
-
-
 #' Check R code files
 #'
 #' Check certain aspects of the format of \R code files in the \sQuote{R}
-#' subdirectory of a package (or of any other kinds of files).
+#' subdirectory of a package (or of any other kinds of files). Optionally
+#' write descriptions of problems to the logfile used by \pkg{pkgutils}, which
+#' can be set using \code{logfile}.
 #'
-#' @inheritParams repair_S4_docu
+#' @param x For \code{check_r_code}, a character vector of names of input files,
+#'   or names of \R package directories. The latter will be expanded as
+#'   appropriate. \code{x} is passed to \code{\link{pkg_files}} with the
+#'   \sQuote{installed} argument set to \code{FALSE}. See there for further
+#'   details.
+#'
+#'   For \code{logfile}, a character scalar for setting the logfile, or
+#'   \code{NULL} for getting the current value. Use an empty string to turn
+#'   logging off.
 #' @param lwd Numeric scalar. Maximum line width allowed. Set this to a
 #'   reasonably large number to effectively turn checking off.
 #' @param indention Numeric scalar. Number of spaces used for one unit of
@@ -454,22 +423,33 @@ delete_o_files.character <- function(x, ext = "o", ignore = NULL, ...) {
 #'   to \code{\link{pkg_files}}
 #' @param encoding Character scalar passed as \sQuote{.encoding} argument to
 #'   \code{\link{map_files}}.
-#' @param ... Optional arguments passed to \code{\link{pkg_files}}.
-#' @return Logical vector; see \code{\link{map_files}} for details. Here
-#'   the result is returned invisibly. As a side
-#'   effect, problem messages are printed to \code{stderr}. See
+#' @param ignore Passed to \code{\link{pkg_files}}. See there for details.
+#' @param ... Optional other arguments passed to \code{\link{pkg_files}}.
+#'
+#' @return \code{check_R_code} yields a logical vector; see
+#'   \code{\link{map_files}} for details. Here the result is returned invisibly.
+#'   As a side effect, problem messages are printed to \code{stderr}. See
 #'   \code{\link{logfile}} for how to send these messages to a file.
-#' @details This function is intended to ensure a consistent and readable \R
-#'   coding style. Not all problems can be checked, however. For instance,
+#'
+#'   \code{logfile} returns a character scalar with the name of the current
+#'   logfile.
+#'
+#' @details \code{check_R_code} is intended to ensure a consistent and readable
+#'   \R coding style. Not all problems can be checked, however. For instance,
 #'   \code{+} and \code{-} are binary as well as unary operators and should
 #'   either be followed by spaces or not, respectively. Yielding no problem
 #'   messages is thus just a minimum requirement for a good coding style. For
-#'   instance, indentation checking does \strong{not} check whether
-#'   continuation lines have the correct number of leading spaces. Rather,
-#'   checks are made line-per-line throughout. In addition to such false
-#'   negatives, \code{check_R_code} falsely complains about numbers in
-#'   exponential notation.
-#' @keywords package
+#'   instance, indentation checking does \strong{not} check whether continuation
+#'   lines have the correct number of leading spaces. Rather, checks are made
+#'   line-per-line throughout. In addition to such false negatives,
+#'   \code{check_R_code} falsely complains about numbers in exponential
+#'   notation.
+#'
+#'   Functions such as \code{\link{check_keywords}} print detected problems, if
+#'   any, using \code{message}. These character vectors can also be safed by
+#'   appending to a logfile.
+#'
+#' @keywords package IO
 #' @family package-functions
 #' @export
 #' @examples
@@ -488,6 +468,14 @@ delete_o_files.character <- function(x, ext = "o", ignore = NULL, ...) {
 #' # '--opsoff', '--modify', '--good', '--parensoff', '--Rcheck', '--tabs' and
 #' # '--untidy'. Checking can be turned off generally or specifically.
 #'
+#' ## logfile()
+#' old <- logfile()
+#' new <- tempfile()
+#' logfile(new)
+#' stopifnot(new == logfile())
+#' logfile(old)
+#' stopifnot(old == logfile())
+#'
 check_R_code <- function(x, ...) UseMethod("check_R_code")
 
 #' @rdname check_R_code
@@ -498,7 +486,7 @@ check_R_code.character <- function(x, lwd = 80L, indention = 2L,
     roxygen.space = 1L, comma = TRUE, ops = TRUE, parens = TRUE,
     assign = TRUE, modify = FALSE, ignore = NULL, accept.tabs = FALSE,
     three.dots = TRUE, what = "R", encoding = "", ...) {
-  spaces <- function(n) paste(rep.int(" ", n), collapse = "")
+  spaces <- function(n) paste0(rep.int(" ", n), collapse = "")
   LL(lwd, indention, roxygen.space, modify, comma, ops, parens, assign,
     accept.tabs, three.dots)
   roxygen.space <- sprintf("^#'%s", spaces(roxygen.space))
@@ -566,6 +554,35 @@ check_R_code.character <- function(x, lwd = 80L, indention = 2L,
   }
   invisible(map_files(pkg_files(x = x, what = what, installed = FALSE,
     ignore = ignore, ...), check_fun, .encoding = encoding))
+}
+
+#' @rdname check_R_code
+#' @export
+#'
+logfile <- function(x) UseMethod("logfile")
+
+#' @rdname check_R_code
+#' @method logfile NULL
+#' @export
+#'
+logfile.NULL <- function(x) {
+  PKGUTILS_OPTIONS$logfile
+}
+
+#' @rdname check_R_code
+#' @method logfile character
+#' @export
+#'
+logfile.character <- function(x) {
+  old <- PKGUTILS_OPTIONS$logfile
+  PKGUTILS_OPTIONS$logfile <- L(x[!is.na(x)])
+  if (nzchar(x))
+    tryCatch(cat(sprintf("\nLOGFILE RESET AT %s\n", date()), file = x,
+      append = TRUE), error = function(e) {
+        PKGUTILS_OPTIONS$logfile <- old
+        stop(e)
+      })
+  invisible(x)
 }
 
 

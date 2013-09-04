@@ -47,9 +47,10 @@
   line \samp{ SEALED <- FALSE #|| SEALED <- TRUE} would be
   modified to \samp{ SEALED <- TRUE #|| SEALED <- FALSE},
   i.e. this could be used to change a package constant
-  before conducting any checking.
-}
-\note{
+  before conducting any checking. Note, hovewer, that lines
+  starting with a \pkg{roxygen2} comment will not be
+  modified.
+
   This preprocessing is currently implemented in a Ruby
   script that comes with the package. It is automatically
   found in the installation directory but fails if a
@@ -64,9 +65,8 @@
     \code{\link{copy_pkg_files}},
     \code{\link{delete_o_files}},
     \code{\link{is_pkg_dir}},
-    \code{\link{pack_desc}},
+    \code{\link{logfile}},   \code{\link{pack_desc}},
     \code{\link{pkg_files}},
-    \code{\link{repair_S4_docu}},
     \code{\link{run_R_CMD}},
   }
 \keyword{package}
