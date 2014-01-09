@@ -13,7 +13,7 @@
 # given, the working directory is checked for subdirectories that contain a
 # DESCRIPTION file, and it is then attempted to document those, if any.
 #
-# (C) 2012 by Markus Goeker (markus [DOT] goeker [AT] dsmz [DOT] de)
+# (C) 2012/2013 by Markus Goeker (markus [DOT] goeker [AT] dsmz [DOT] de)
 #
 # This program is distributed under the terms of the Gnu Public License V2.
 # For further information, see http://www.gnu.org/licenses/gpl.html
@@ -42,14 +42,22 @@ copy_dir <- function(from, to, delete) {
 }
 
 
-do_style_check <- function(files, opt) {
+vignette_subdirs <- function() {
+  c(subdirs <- c("vignettes", "doc"), file.path("inst", subdirs))
+}
+
+
+do_style_check <- function(dirs, opt) {
+  check_style <- function(dirs, subdirs, ...) check_R_code(x = dirs,
+    what = subdirs, lwd = opt$width, ops = !opt$opsoff, comma = !opt$commaoff,
+    indention = opt$blank, roxygen.space = opt$jspaces, modify = opt$modify,
+    parens = !opt$parensoff, assign = !opt$assignoff, accept.tabs = opt$tabs,
+    three.dots = !opt$dotsok, encoding = opt$encoding, ...)
   subdirs <- c("tests", "scripts")
-  subdirs <- c("R", subdirs, file.path("inst", subdirs))
-  y <- check_R_code(x = files, lwd = opt$width, ops = !opt$opsoff,
-    comma = !opt$commaoff, indention = opt$blank, roxygen.space = opt$jspaces,
-    modify = opt$modify, ignore = opt$good, parens = !opt$parensoff,
-    assign = !opt$assignoff, accept.tabs = opt$tabs, three.dots = !opt$dotsok,
-    what = subdirs, encoding = opt$encoding)
+  subdirs <- c("R", "demo", subdirs, file.path("inst", subdirs))
+  y <- check_style(dirs, subdirs, ignore = opt$good, filter = "none")
+  y <- c(y, check_style(dirs, vignette_subdirs(), filter = "sweave",
+    ignore = I(list(pattern = "\\.[RS]?nw$", ignore.case = TRUE))))
   isna <- is.na(y)
   if (any(y & !isna))
     message(paste(sprintf("file '%s' has been modified", names(y)[y & !isna]),
@@ -58,6 +66,15 @@ do_style_check <- function(files, opt) {
     message(paste(sprintf("checking file '%s' resulted in an error",
       names(y)[isna]), collapse = "\n"))
   length(which(isna))
+}
+
+
+do_compact <- function(dirs, opt) {
+  pdf.files <- pkg_files(dirs, vignette_subdirs(), FALSE,
+    I(list(ignore.case = TRUE, pattern = "\\.pdf$")))
+  message("GS command is ", Sys.getenv("R_GSCMD", "<empty>"))
+  print(tools::compactPDF(pdf.files, gs_quality = opt$quality))
+  0
 }
 
 
@@ -77,6 +94,42 @@ run_sweave <- function(files, opt) {
 do_split <- function(x, sep = ",") {
   x <- unlist(strsplit(x, sep, fixed = TRUE))
   x[nzchar(x)]
+}
+
+
+remove_comments_and_reduce_empty_lines <- function(x) {
+  x <- grep("^#", x, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE)
+  ne <- nzchar(x)
+  x[ne | c(FALSE, ne[-length(ne)])]
+}
+
+
+textfile2rds <- function(file) {
+  if (!nzchar(file) || grepl("\\.rds$", file, TRUE, TRUE))
+    return(file)
+  x <- readLines(file)
+  saveRDS(x[nzchar(x)], file <- tempfile(fileext = ".rds"))
+  file
+}
+
+
+show_spellcheck_result <- function(x) {
+  if (!nrow(x))
+    return(invisible(NULL))
+  x[, "File"] <- basename(x[, "File"])
+  x <- x[order(x[, "Original"]), c("Original", "File", "Line", "Column")]
+  names(x) <- sprintf(".%s.", names(x))
+  write.table(x, "", sep = "\t", quote = FALSE, row.names = FALSE)
+  invisible(NULL)
+}
+
+
+news_filter <- function(ifile, encoding = "unknown") {
+  x <- readLines(ifile, encoding = encoding, warn = FALSE)
+  x <- gsub("([\\w.]+|`[^`]+`)\\([^)]*\\)", "FUNCTION", FALSE, TRUE)
+  x <- gsub("'[^']+'", "ARGUMENT", FALSE, TRUE)
+  x <- gsub("[*][^*]+[*]", "SURNAME", FALSE, TRUE)
+  x
 }
 
 
@@ -165,18 +218,22 @@ option.parser <- OptionParser(option_list = list(
     help = "Logfile to use for problem messages [default: %default]",
     metavar = "FILE"),
 
-  # L
+  make_option(c("-L", "--lines-reduce"), action = "store_true", default = FALSE,
+    help = "Reduce number of lines in R code [default: %default]"),
 
   make_option(c("-m", "--modify"), action = "store_true", default = FALSE,
     help = paste("Potentially modify R sources when style checking",
     "[default: %default]")),
 
-  # M
+  make_option(c("-M", "--mark-duplicates"), action = "store_true",
+    help = "Mark duplicate words in Rd text [default: %default]",
+    default = FALSE),
 
   make_option(c("-n", "--nosudo"), action = "store_true", default = FALSE,
     help = "In conjunction with -i, do not use sudo [default: %default]"),
 
-  # N
+  make_option(c("-N", "--no-internal"), action = "store_true", default = FALSE,
+    help = "Remove Rd files with 'internal' as keyword [default: %default]"),
 
   make_option(c("-o", "--options"), type = "character", default = "as-cran",
     help = "'R CMD check' options, comma-separated list [default: %default]",
@@ -194,7 +251,9 @@ option.parser <- OptionParser(option_list = list(
   make_option(c("-q", "--quick"), action = "store_true", default = FALSE,
     help = "Do not remove duplicate 'seealso' links [default: %default]"),
 
-  # Q
+  make_option(c("-Q", "--quality"), type = "character", default = "",
+    help = "PDF quality for running in compression mode [default: %default]",
+    metavar = "STR"),
 
   make_option(c("-r", "--remove"), action = "store_true", default = FALSE,
     help = "First remove output directories if distinct [default: %default]"),
@@ -232,7 +291,9 @@ option.parser <- OptionParser(option_list = list(
     help = "Maximum allowed line width in R code [default: %default]",
     metavar = "NUMBER"),
 
-  # W
+  make_option(c("-W", "--whitelist"), type = "character", default = "",
+    help = "White list for (and turning on) spell checking [default: %default]",
+    metavar = "LIST"),
 
   make_option(c("-x", "--exclude"), type = "character", default = "",
     help = paste("Files to ignore when using -t, comma-separated list",
@@ -270,6 +331,7 @@ opt$buildopts <- do_split(opt$buildopts)
 opt$delete <- do_split(opt$delete, ":")
 opt$good <- basename(do_split(opt$good))
 opt$exclude <- do_split(opt$exclude)
+opt$whitelist <- textfile2rds(opt$whitelist)
 
 
 ################################################################################
@@ -289,7 +351,6 @@ if (opt$Rcheck) { # R style check only
 
 
 ################################################################################
-
 
 
 if (length(package.dirs)) {
@@ -377,17 +438,24 @@ for (i in seq_along(package.dirs)) {
   if (!opt$untidy) {
     message("Checking R code of", msg)
     errs <- errs + do_style_check(out.dir, opt)
+    message("Checking Sweave code-chunk headers of", msg)
+    check_Sweave_start(out.dir)
   }
 
   message("Creating documentation for", msg)
   roxygenize(out.dir)
 
   message("Repairing documentation for", msg)
-  repair_docu(out.dir, remove.dups = !opt$quick)
+  skip <- repair_docu(out.dir, remove.dups = !opt$quick,
+    drop.internal = opt$`no-internal`, text.dups = opt$`mark-duplicates`)
+  if (is.logical(skip) && any(skip))
+    skip <- paste0("--skip=", paste0(names(skip)[skip], collapse = ","))
+  else
+    skip <- ""
 
   if (opt$S4methods) {
     message("Repairing S4 method documentation for", msg)
-    errs <- errs + repair_S4_docu(out.dir, ruby = opt$exec)
+    errs <- errs + repair_S4_docu(out.dir, ruby = opt$exec, sargs = skip)
   }
 
   if (suppressWarnings(file.remove(file.path(out.dir, "inst"))))
@@ -398,9 +466,20 @@ for (i in seq_along(package.dirs)) {
     errs <- errs + swap_code(out.dir, ruby = opt$exec)
   }
 
+  if (opt$`lines-reduce` && !identical(in.dir, out.dir)) {
+    message("Removing comments and reducing empty lines of", msg)
+    map_files(list.files(file.path(out.dir, "R"), full.names = TRUE),
+      remove_comments_and_reduce_empty_lines)
+  }
+
   if (!opt$zapoff) {
     message("Deleting object files (if any) of", msg)
     errs <- errs + !all(delete_o_files(out.dir))
+  }
+
+  if (nzchar(opt$quality)) {
+    message("Compacting PDF files (if any) of", msg)
+    do_compact(out.dir, opt)
   }
 
   pkg.file <- out.dir
@@ -419,6 +498,22 @@ for (i in seq_along(package.dirs)) {
   if (opt$check || ((opt$install || opt$yes) && !opt$unsafe)) {
     message("Checking", msg)
     errs <- errs + (check.err <- run_R_CMD(pkg.file, "check", opt$options))
+  }
+
+  if (nzchar(opt$whitelist)) {
+    message("Checking spelling in Rd files of", msg)
+    show_spellcheck_result(aspell_package_Rd_files(out.dir,
+      control = "-d en_GB", dictionaries = opt$whitelist,
+      drop = c("\\author", "\\references", "\\seealso", "\\code",
+        "\\acronym", "\\pkg", "\\kbd", "\\command", "\\file")))
+    message("Checking spelling in DESCRIPTION file of", msg)
+    show_spellcheck_result(pack_desc(out.dir, "spell",
+      dictionaries = opt$whitelist, control = "-d en_GB"))
+    message("Checking spelling in NEWS/ChangeLog files (if any) of", msg)
+    ff <- file.path(out.dir, c("NEWS", "ChangeLog"))
+    for (f in ff[file.exists(ff)])
+      show_spellcheck_result(aspell(f, dictionaries = opt$whitelist,
+        control = "-d en_GB", filter = news_filter))
   }
 
   if (opt$install && (opt$unsafe || !check.err)) {

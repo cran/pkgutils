@@ -1,63 +1,13 @@
-
-
-
-################################################################################
-
-
-#' The pkgutils package
-#'
-#' Tools useful when creating \R packages, particularly for checking the
-#' documentation produced by \pkg{roxygen2} and for adding support for the
-#' documentation of S4 methods, but also for checking some aspects of the
-#' coding style. Further, some functions of use when coding a package and
-#' others of use in interactive \R sessions. Finally, \R syntax highlighting
-#' for some text editors.
-#'
-#' @name pkgutils.package
-#' @aliases pkgutils
-#' @docType package
-#'
-#' @details The package contains the following non-standard subdirectories:
-#' \describe{
-#'   \item{auxiliary}{Contains scripts in other programming languages that are
-#'     called by some functions of this package. Some functionality of the
-#'     \sQuote{docu.R} script needs them.}
-#'   \item{highlighting}{Patterns for highlighting \R syntax for use with some
-#'     text editors. See the files themselves for details.}
-#'   \item{scripts}{Rscript scripts for non-interactive use of \R. The one used
-#'     to create, check and modify package documentation is \sQuote{docu.R}.
-#'     The other scripts have no connection to creating packages but might also
-#'     be useful. See the help messages of these scripts (obtained via the
-#'     \sQuote{--help} switch) for details. The scripts are expected to run at
-#'     least on UNIX-like operating systems. Windows users might need to
-#'     install Rtools, see \url{http://cran.r-project.org/bin/windows/Rtools/}.
-#'     }
-#' }
-#' @keywords package
-#'
 NULL
 
+SEALED <- FALSE
 
-################################################################################
-
-
-# See check_keywords() for the use of this environment.
-#
 PKGUTILS_OPTIONS <- new.env(parent = emptyenv())
 PKGUTILS_OPTIONS$logfile <- ""
 
-
-# Directory stack used by swd(). See there.
-#
 DIRS <- new.env(parent = emptyenv())
 DIRS$WD_INDEX <- 0L
 
-
-################################################################################
-
-
-# used by paper_size()
-#
 SPECIAL_PAPER_SIZES <- structure(
   .Data = c(216, 432, 559, 864, 279, 457, 108, 381, 445, 572, 584, 184, 216,
     216, 210, 216, 216, 203, 140, 140, 127, 419, 279, 215.9, 215.9, 457, 140,
@@ -76,14 +26,7 @@ SPECIAL_PAPER_SIZES <- structure(
     "super b", "tabloid", "us std fanfold"), c("width", "height"))
 )
 
-
-################################################################################
-
-
-# patterns used by check_R_code()
-
 QUOTED <- "(%s(\\\\\"|[^\"])*%s|%s[^`]+%s|%s(\'|[^'])*%s)"
-# TODO: this still does not cover all cases
 
 QUOTED_END <- sprintf(QUOTED, '"', "$", "`", "$", "'", "$")
 
@@ -91,17 +34,10 @@ QUOTED_BEGIN <- sprintf(QUOTED, "^", '"', "^", "`", "^", "'")
 
 QUOTED <- sprintf(QUOTED, '"', '"', "`", "`", "'", "'")
 
-OPS_LEFT <- paste("[^\\s]([~/^]|%[^%]*%)", "[^\\s*][*]", "[^\\s<]<",
+OPS_LEFT <- paste("[^\\s]([~/^]|%%)", "[^\\s*][*]", "[^\\s<]<",
   "[^\\s[(:][+]", "[^\\s<[(:]-", "[^\\s>-]>", "[^\\s<>=!]=", "[^\\s&]&",
   "[^\\s|]\\|", sep = "|")
 
-# We cannot check by what '-' and '+' are followed because these are also unary
-# operators.
-#
-OPS_RIGHT <- paste("([~/^]|%[^%]*%)[^\\s]", "[*][^\\s*]", "<[^\\s<=-]",
+OPS_RIGHT <- paste("([~/^]|%%)[^\\s]", "[*][^\\s*]", "<[^\\s<=-]",
   ">[^\\s>=]", "=[^\\s=,]", "&[^\\s&]", "\\|[^\\s|]", sep = "|")
-
-
-################################################################################
-
 

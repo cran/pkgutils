@@ -52,7 +52,7 @@
   names are prepended before joining the vector elements. A
   character scalar is used as template for \code{sprintf},
   which gets \code{names(x)} passed as second and \code{x}
-  as third argument. (This order can be inversed, see next
+  as third argument. (This order can be inverted, see next
   argument.)} }}
 
   \item{style}{Character scalar. The main options are:
@@ -142,7 +142,9 @@ stopifnot(listing(pi) == "1: 3.141593") # controlled by getOption("digits")
 
   Other coding-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{collect}},   \code{\link{flatten}},   \code{\link{must}}
+    \code{\link{collect}},   \code{\link{contains}}, \code{\link{flatten}},
+    \code{\link{map_names}},
+  \code{\link{map_values}}, \code{\link{must}}
 }
 \keyword{utilities}
 

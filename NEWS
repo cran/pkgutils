@@ -1,3 +1,21 @@
+pkgutils 0.6-0
+---------------
+
+Bug fixes:
+
+- fixed minor bug in the 'repair_docu.rb' script
+
+New features:
+
+- new virtual S4 class 'DBTABLES' with a couple of associated methods
+
+- new function check_Sweave_start(), contains(), map_values() and map_names()
+
+- new arguments for repair_docu(), check_R_code() 
+
+- new options/features for the 'merge.R', 'docu.R' and 'repair_docu.rb' scripts
+
+
 pkgutils 0.5-0
 ---------------
 

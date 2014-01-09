@@ -48,7 +48,7 @@
   of other arguments is special if all elements of \code{x}
   are atomic. See below.} }}
 
-  \item{min.cov}{Numeric scalar indicating the mimimal
+  \item{min.cov}{Numeric scalar indicating the minimal
   coverage required in the resulting presence-absence
   matrix. Columns with a fewer number of non-zero entries
   are removed.}
@@ -57,8 +57,8 @@
   names should be inserted for elements of \code{x} that
   miss them. If \code{NA}, they are skipped, but with a
   warning; if \code{FALSE}, they are skipped silently.
-  This has only an effect in conjunction with the last
-  three values of \code{what}. If \sQuote{datasets} are
+  This only has an effect in conjunction with the last
+  three values of \code{what}. If \kbd{datasets} are
   chosen, it usually has only an effect if all elements of
   \code{x} are atomic.}
 
@@ -149,7 +149,9 @@ stopifnot(dim(got) == c(3, 3), any(is.na(got)))
 
   Other coding-functions: \code{\link{L}},
   \code{\link{LL}}, \code{\link{case}},
-    \code{\link{listing}},         \code{\link{must}}
+    \code{\link{contains}}, \code{\link{listing}},
+          \code{\link{map_names}}, \code{\link{map_values}},
+  \code{\link{must}}
 }
 \keyword{manip}
 

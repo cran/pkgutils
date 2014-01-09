@@ -1,10 +1,12 @@
 \name{check_R_code}
 \alias{check_R_code}
 \alias{check_R_code.character}
+\alias{check_Sweave_start}
+\alias{check_Sweave_start.character}
 \alias{logfile}
 \alias{logfile.NULL}
 \alias{logfile.character}
-\title{Check R code files}
+\title{Check R (or Sweave) code files}
 \usage{
   check_R_code(x, ...)
 
@@ -12,7 +14,14 @@
     indention = 2L, roxygen.space = 1L, comma = TRUE,
     ops = TRUE, parens = TRUE, assign = TRUE,
     modify = FALSE, ignore = NULL, accept.tabs = FALSE,
-    three.dots = TRUE, what = "R", encoding = "", ...)
+    three.dots = TRUE, what = "R", encoding = "",
+    filter = c("none", "sweave"), ...)
+
+  check_Sweave_start(x, ...)
+
+  \method{check_Sweave_start}{character} (x, ignore = TRUE,
+    what = c("vignettes", file.path("inst", "doc")),
+    encoding = "", ...)
 
   logfile(x)
 
@@ -59,7 +68,7 @@
   characters only and are not preceded by a space.}
 
   \item{assign}{Logical scalar indicating that it should be
-  checked that there is no linebreak within named
+  checked that there is no line break within named
   function-argument assignments.}
 
   \item{modify}{Logical scalar indicating whether the
@@ -84,7 +93,12 @@
   \sQuote{.encoding} argument to \code{\link{map_files}}.}
 
   \item{ignore}{Passed to \code{\link{pkg_files}}. See
-  there for details.}
+  there for details. A logical scalar is used for selecting
+  or discarding a default filter suitable for the target
+  files.}
+
+  \item{filter}{Character scalar indicating the filter to
+  use.}
 
   \item{...}{Optional other arguments passed to
   \code{\link{pkg_files}}.}
@@ -101,10 +115,12 @@
 }
 \description{
   Check certain aspects of the format of \R code files in
-  the \sQuote{R} subdirectory of a package (or of any other
-  kinds of files). Optionally write descriptions of
-  problems to the logfile used by \pkg{pkgutils}, which can
-  be set using \code{logfile}.
+  the \sQuote{R} subdirectory of a package, or of any other
+  kinds of files. \R code can also be extracted from Sweave
+  files. Optionally write descriptions of problems to the
+  logfile used by \pkg{pkgutils}, which can be set using
+  \code{logfile}. Alternatively, check the labels used in
+  the lines that start a Sweave code chunk.
 }
 \details{
   \code{check_R_code} is intended to ensure a consistent
@@ -122,7 +138,7 @@
 
   Functions such as \code{\link{check_keywords}} print
   detected problems, if any, using \code{message}. These
-  character vectors can also be safed by appending to a
+  character vectors can also be saved by appending to a
   logfile.
 }
 \examples{

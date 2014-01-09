@@ -13,9 +13,13 @@
 \usage{
   repair_docu(x, ...)
 
-  \method{repair_docu}{character} (x, ignore = NULL, ...)
+  \method{repair_docu}{character} (x, ignore = NULL,
+    drop.internal = FALSE, ...)
 
-  \method{repair_docu}{Rd} (x, remove.dups = FALSE, ...)
+  \method{repair_docu}{Rd} (x, remove.dups = FALSE,
+    text.dups = FALSE,
+    infile = attr(attr(x, "srcref"), "srcfile")$filename,
+    ...)
 
   check_keywords(x, ...)
 
@@ -51,17 +55,26 @@
   \sQuote{Rd}.}
 
   \item{remove.dups}{Logical scalar indicating whether
-  (probably) duplicate links in the \sQuote{seealso}
-  section shall be removed.}
+  (probably) duplicate links in the \code{seealso} section
+  shall be removed.}
 
-  \item{file}{Optional character scalar indicating the
-  filename from which the \sQuote{Rd} object was read.
+  \item{text.dups}{Logical scalar indicating whether
+  duplicate words within text content should be noted.}
+
+  \item{file}{Optional character scalar indicating the name
+  of the file from which the \sQuote{Rd} object was read.
   Useful when creating messages describing a problem. See
   \code{\link{logfile}}.}
+
+  \item{infile}{Used like the \code{file} argument.}
 
   \item{full}{Logical scalar indicating whether the full
   content of the \sQuote{KEYWORDS.db} file should be
   returned, not just the list of keywords.}
+
+  \item{drop.internal}{Logical scalar indicating whether Rd
+  files whose only keyword is \sQuote{internal} should be
+  deleted.}
 
   \item{list.only}{Logical scalar indicating whether the
   keywords should just be collected, not checked against
@@ -72,13 +85,19 @@
 
   \item{ignore}{\code{NULL} or a character vector of file
   names (without their directory-name parts) to remove from
-  the result. Matching is done case- insensitively. Ignored
-  if empty.}
+  the result, or a list. Ignored if empty. If a non-empty
+  character vector, matching is done case- insensitively.
+  If a list, used as arguments passed to \code{grep}
+  (except for \code{x}, \code{value} and \code{invert}).
+  Enclosing \code{ignore} in \code{I()} reverts the
+  action.}
 }
 \value{
   The \sQuote{Rd} method of \code{repair_docu} returns an
   object of class \sQuote{Rd}, the character method a list
-  of such objects, invisibly.
+  of such objects, invisibly.  If \code{drop.internal} is
+  \code{TRUE}, it returns a logical vector indicating
+  whether it was attempted to remove the file.
 
   \code{check_keywords} returns a character vector. As a
   side effect, problem messages are printed to
@@ -103,14 +122,14 @@
   \code{check_keywords} checks keywords in Rd files for
   their presence, for their occurrence within the list
   given in the \sQuote{KEYWORDS.db} file that comes with
-  \R{}, and for fitting to the \sQuote{docType} of the
+  \R{}, and for fitting to the \code{docType} entry of the
   \sQuote{Rd} object. The \sQuote{Rd} method examines the
   content of Rd files.
 
   In addition to checking that the keywords used are listed
   in the \sQuote{KEYWORDS.db} file, it is checked that
   \sQuote{internal} is not combined with other keywords,
-  and that \sQuote{docType} entries such as \sQuote{class},
+  and that \code{docType} entries such as \sQuote{class},
   \sQuote{data} or \sQuote{package} are accompanied by the
   appropriate keywords.
 
@@ -119,12 +138,12 @@
   presence/absence of examples in Rd files. They should not
   be present if the list of \sQuote{keywords} contains
   \sQuote{internal}. Otherwise they should be present
-  unless \sQuote{docType} is \sQuote{class} or
+  unless \code{docType} is \sQuote{class} or
   \sQuote{package}.
 }
 \examples{
 # 'Rd' objects
-summary(x <- repair_docu(xyplot.docu))
+summary(x <- repair_docu(xyplot.docu, remove.dups = TRUE, text.dups = TRUE))
 stopifnot(identical(x, xyplot.docu)) # nothing to repair here
 (x <- check_keywords(xyplot.docu))
 stopifnot(identical(x, "hplot"))

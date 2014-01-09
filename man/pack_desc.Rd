@@ -10,9 +10,9 @@
   pack_desc(pkg, ...)
 
   \method{pack_desc}{character} (pkg,
-    action = c("read", "update", "source"), version = TRUE,
-    demo = FALSE, date.format = "\%Y-\%m-\%d",
-    envir = globalenv(), ...)
+    action = c("read", "update", "source", "spell"),
+    version = TRUE, demo = FALSE,
+    date.format = "\%Y-\%m-\%d", envir = globalenv(), ...)
 
   pkg_files(x, ...)
 
@@ -46,15 +46,16 @@
   \item{date.format}{Character scalar. The format used and
   expected for the date of the package.}
 
-  \item{envir}{Environment used when sourceing files. Only
-  relevant if \code{action} is set to \sQuote{source}.}
+  \item{envir}{Environment used when reading the files with
+  \code{source}. Only relevant if \code{action} is set to
+  \sQuote{source}.}
 
   \item{x}{Character vector. For \code{pkg_files}, if
   \code{installed} is \code{TRUE}, the names of installed
   packages. Otherwise names of package directories, which
   are expanded automatically, and/or directly the names of
   files, which may or may not reside within a package. The
-  directory must be recognizable by \code{is_pkg_dir} for
+  directory must be recognisable by \code{is_pkg_dir} for
   the expansion to work. For \code{is_pkg_dir}, an
   arbitrary character vector.}
 
@@ -69,8 +70,12 @@
 
   \item{ignore}{\code{NULL} or a character vector of file
   names (without their directory-name parts) to remove from
-  the result. Matching is done case- insensitively. Ignored
-  if empty.}
+  the result, or a list. Ignored if empty. If a non-empty
+  character vector, matching is done case- insensitively.
+  If a list, used as arguments passed to \code{grep}
+  (except for \code{x}, \code{value} and \code{invert}).
+  Enclosing \code{ignore} in \code{I()} reverts the
+  action.}
 
   \item{...}{Optional arguments passed to and from other
   methods, or between the methods.}
@@ -78,20 +83,23 @@
 \value{
   The value returned by \code{pack_desc} depends on the
   value of \code{action}: \describe{ \item{read}{Object of
-  class \sQuote{pack_descs}, basically a nested list with
+  class \code{pack_descs}, basically a nested list with
   \code{pkg} as names. The values are objects of class
-  \sQuote{pack_desc}.} \item{update}{One- or two-column
-  character matrix with one row per entry in \code{pkg},
-  showing the updated date and optionally the version
-  string. \code{\dots} is passed to \code{write.dcf} if
-  \code{demo} is \code{FALSE}.} \item{source}{This loads
-  the \R code files of the package(s) using \code{source}
-  from the \pkg{base} package in the correct order, and
-  call \code{library} on all the package names given under
+  \code{pack_desc}.} \item{source}{This loads the \R code
+  files of the package(s) using \code{source} from the
+  \pkg{base} package in the correct order, and call
+  \code{library} on all the package names given under
   \sQuote{Depends} and \sQuote{Imports}. Thus a list of
   \code{source} results is obtained, returned invisibly.
   \code{\dots} is passed to \code{source} if \code{demo} is
-  \code{FALSE}.} }
+  \code{FALSE}.} \item{spell}{Check the spelling of using
+  \code{aspell} and an appropriate filter. This yields an
+  object of class \code{aspell}. Package names marked as
+  misspelled, if any, are automatically discarded.}
+  \item{update}{One- or two-column character matrix with
+  one row per entry in \code{pkg}, showing the updated date
+  and optionally the version string. \code{\dots} is passed
+  to \code{write.dcf} if \code{demo} is \code{FALSE}.} }
 
   \code{pkg_files} yields a character vector of file names
   (empty if no such files are found).
@@ -101,16 +109,21 @@
 }
 \description{
   \code{pack_desc} reads the \sQuote{DESCRIPTION} file of
-  an \R package. Optionally it sets the \sQuote{Date} entry
-  to the current date, and if requested increment the
+  an \R package and makes use of its content in several
+  possible ways. \code{pkg_files} lists files within given
+  subdirectories of a package. It works on either installed
+  packages or package source folders. \code{is_pkg_dir}
+  determines whether names refer to such package
+  directories.
+}
+\details{
+  \code{pack_desc} optionally sets the \sQuote{Date} entry
+  to the current date, and if requested increments the
   subversion number of the package version, if any, and
-  write the data back to each input file. Alternatively,
-  call \code{source} on all \R code files of a package as
-  listed in the \sQuote{DESCRIPTION} file. \code{pkg_files}
-  lists files within given subdirectories of a package. It
-  works on either installed packages or package source
-  folders. \code{is_pkg_dir} determines whether names refer
-  to such package directories.
+  writes the data back to each input file. Alternatively,
+  it calls \code{source} on all \R code files of a package
+  as listed in the \sQuote{DESCRIPTION} file. Spell
+  checking is another option.
 }
 \examples{
 pkg <- find.package(c("tools", "utils"), quiet = TRUE)
@@ -131,7 +144,7 @@ stopifnot(is.character(x), is.matrix(x), rownames(x) == pkg,
 # Source'ing (in demo mode, of course)
 (x <- pack_desc(pkg, "source", demo = TRUE))
 stopifnot(is.list(x), names(x) == pkg, sapply(x, is.list))
-stopifnot(sapply(x, names) == c("depends", "imports", "r.files"))
+stopifnot(sapply(x, names) == c("Depends", "Imports", "Collate"))
 
 # See also the 'docu.R' script, options '--format' and '--keep'.
 
@@ -152,6 +165,7 @@ stopifnot(x)
   utils::packageDescription
 
   Other package-functions: \code{\link{check_R_code}},
+    \code{\link{check_Sweave_start}},
     \code{\link{copy_pkg_files}},
     \code{\link{delete_o_files}},
     \code{\link{logfile}},   \code{\link{run_R_CMD}},

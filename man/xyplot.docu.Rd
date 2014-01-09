@@ -1,7 +1,7 @@
 \docType{data}
 \name{xyplot.docu}
 \alias{xyplot.docu}
-\title{Example RD dataset: xyplot() documentation}
+\title{Example \sQuote{Rd} data set: \code{xyplot} documentation}
 \format{\sQuote{Rd} object as produced by \code{parse_Rd} from the
   \pkg{tools} package.}
 \description{
@@ -13,6 +13,5 @@
 data(xyplot.docu)
 stopifnot(inherits(xyplot.docu, "Rd"), is.list(xyplot.docu))
 }
-\keyword{datasets}
 \keyword{datasets}
 

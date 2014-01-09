@@ -1,5 +1,34 @@
+2012-XX-XX (6th release on CRAN)
 
-2012-08-20 (5th release on CRAN)
+- fixed minor bug in the 'repair_docu.rb' script that affected aliases to
+  generic functions
+
+- added tests based on the 'testthat' package
+
+- new virtual S4 class 'DBTABLES' with a couple of associated methods
+
+- new methods contains(), map_values() and map_names() (copied from 'opm' to
+  'pkgutils', to be removed from 'opm' later on)
+
+- new function check_Sweave_start(), now also used by 'docu.R'
+
+- repair_docu() gets new arguments 'drop.interal', 'text.dups' and 'infile'
+
+- the 'merge.R' script gets new options -i, -f and -m; by default column names
+  are not output any mpore if the -b option is used
+
+- the 'docu.R' scripts gets new options -L, -M, -N, -Q and -W
+
+- check_R_code() gets a 'filter' argument
+
+- the 'docu.R' scripts now also style-checks R code in the 'demo' directory,
+  if any, and in the vignettes, if any
+
+- the 'repair_docu.rb' script now supports '$'() and '$<-'() and comments after
+  names of automatically generated methods; methods to be documented within the
+  same Rd file are now written in order
+
+2012-09-18 (5th release on CRAN)
 
 - fixed bug in 'docu.R' that caused wrong archive file name to be passed to 'R
   CMD check' when running script not from parent directory

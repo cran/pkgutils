@@ -6,7 +6,7 @@
 \alias{paper_size}
 \alias{paper_size.character}
 \alias{paper_size.numeric}
-\title{Paper size for PDF files}
+\title{Paper size for \acronym{PDF} files}
 \usage{
   mypdf(file, ...)
 
@@ -50,8 +50,9 @@
   For \code{max_rgb_contrast}, the names or hexadecimal
   codes of the colours to be sorted. Might also be an
   integer vector, see \code{col2rgb} from the
-  \pkg{grDevices} package for details. Duplicate RGB
-  coordinates and unknown names will cause an error.}
+  \pkg{grDevices} package for details. Duplicate
+  \acronym{RGB} coordinates and unknown names will cause an
+  error.}
 
   \item{landscape}{Logical scalar. If \code{FALSE},
   \sQuote{portrait} paper orientation is assumed. For the
@@ -62,7 +63,7 @@
   \sQuote{landscape} orientation.}
 
   \item{inches}{Logical scalar. If \code{TRUE}, output unit
-  is inches, otherwise millimeters.}
+  is inches, otherwise millimetres.}
 
   \item{series}{Character scalar indicating the
   \sQuote{DIN} series to assume.}
@@ -88,18 +89,19 @@
 }
 \details{
   The computation of the paper size is done numerically for
-  the \acronym{DIN} series, whereas a lookup table is used
+  the \acronym{DIN} series, whereas a look-up table is used
   for the other formats.
 
   \code{max_rgb_contrast} arranges colours so as to achieve
-  that neighboring colours are most distinct with respect
-  to their RGB coordinates. This is done as follows: (1)
-  Euclidean distances between the RGB coordinates of the
-  input colours are calculated; (2) the distances are
-  logarithmized and inversed; (3) a principal-coordinate
-  analysis is conducted on these inversed distances; (4)
-  the input colours are sorted according to the first
-  principal coordinate.
+  that neighbouring colours are most distinct with respect
+  to their \acronym{RGB} coordinates.  This is done as
+  follows: (1) Euclidean distances between the
+  \acronym{RGB} coordinates of the input colours are
+  calculated; (2) the distances are logarithmised and
+  inverted; (3) a principal-coordinate analysis is
+  conducted on these inverted distances; (4) the input
+  colours are sorted according to the first principal
+  coordinate.
 
   Note that this is probably only works for colour vectors
   of small to moderate size, and that the resulting vector

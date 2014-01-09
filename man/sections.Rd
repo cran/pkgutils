@@ -21,8 +21,8 @@
 
   \item{pattern}{Scalar. If of mode \sQuote{character},
   passed to \code{grepl} from the \pkg{base} package. If
-  numeric, used to indicate the lengths of the substrings
-  to extract.}
+  numeric, used to indicate the lengths of the partial
+  strings to extract.}
 
   \item{invert}{Negate the results of \code{grepl}?}
 
@@ -34,8 +34,8 @@
 \value{
   The \sQuote{logical} method returns an ordered factor,
   its length being the one of \code{x}. The levels
-  correspond to a groups whose indices correspond to the
-  index of a \code{TRUE} value in \code{x} plus the indices
+  correspond to a groups whose indexes correspond to the
+  index of a \code{TRUE} value in \code{x} plus the indexes
   of the \code{FALSE} values immediately following it.
   \sQuote{logical} method returns a list of character
   vectors.
@@ -47,8 +47,8 @@
   split the logical vector, or any equal-length object from
   which it was created, into according groups. The
   \sQuote{character} method splits a character vector
-  according to a pattern or to a given output substring
-  length.
+  according to a pattern or to a given output partial
+  string length.
 }
 \details{
   When applying \code{split}, positions corresponding to

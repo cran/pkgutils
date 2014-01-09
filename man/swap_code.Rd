@@ -16,12 +16,15 @@
   details.}
 
   \item{...}{Optional arguments, currently passed as
-  arguments additional to \sQuote{x} to
-  \code{\link{run_ruby}}. See there for details.}
+  \code{args} arguments to \code{\link{run_ruby}}. See
+  there for details. The sole exception is an \code{sargs}
+  argument, which is a character vector of options passed
+  to the Ruby script. See below.}
 
   \item{ignore}{\code{NULL} or character vector with names
-  of files to ignore.  Passed to \code{\link{pkg_files}},
-  see there for details of how names are matched.}
+  of \R code files to ignore. Passed to
+  \code{\link{pkg_files}}, see there for details of how
+  names are matched.}
 }
 \value{
   Currently the return value of the call to
@@ -36,10 +39,10 @@
 }
 \details{
   The code preprocessing works simply as follows: Lines are
-  split at the first occurence of \sQuote{#||}, if any, the
-  parts reversed and joined again with a space character,
-  including the separator. Leading whitespace is kept.
-  Whitespace around the parts, if any, is removed
+  split at the first occurrence of \sQuote{#||}, if any,
+  the parts reversed and joined again with a space
+  character, including the separator. Leading whitespace is
+  kept. Whitespace around the parts, if any, is removed
   (effectively transformed to a single space). There is
   \strong{no} check done to ensure that the part moved in
   front of the comment character is syntactically valid in
@@ -47,7 +50,7 @@
   line \samp{ SEALED <- FALSE #|| SEALED <- TRUE} would be
   modified to \samp{ SEALED <- TRUE #|| SEALED <- FALSE},
   i.e. this could be used to change a package constant
-  before conducting any checking. Note, hovewer, that lines
+  before conducting any checking. Note, however, that lines
   starting with a \pkg{roxygen2} comment will not be
   modified.
 
@@ -62,6 +65,7 @@
 }
 \seealso{
   Other package-functions: \code{\link{check_R_code}},
+    \code{\link{check_Sweave_start}},
     \code{\link{copy_pkg_files}},
     \code{\link{delete_o_files}},
     \code{\link{is_pkg_dir}},

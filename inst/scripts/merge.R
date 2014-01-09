@@ -5,7 +5,7 @@
 #
 # merge.R -- R script for merging CSV files. Part of the pkgutils package.
 #
-# (C) 2012 by Markus Goeker (markus [DOT] goeker [AT] dsmz [DOT] de)
+# (C) 2013 by Markus Goeker (markus [DOT] goeker [AT] dsmz [DOT] de)
 #
 # This program is distributed under the terms of the Gnu Public License V2.
 # For further information, see http://www.gnu.org/licenses/gpl.html
@@ -28,7 +28,7 @@ COLUMN_DEFAULT_NAME <- "Object"
 
 do_write <- function(x, options) {
   write.table(x, sep = options$separator, row.names = FALSE,
-    quote = !options$unquoted)
+    quote = !options$unquoted, col.names = !opt$bald || opt$`make-header`)
 }
 
 
@@ -43,7 +43,11 @@ do_read <- function(infile, options) {
 
 read_and_create_unique_names <- function(files, options) {
   data <- lapply(X = files, FUN = do_read, options = options)
-  suffixes <- file_path_sans_ext(basename(files), compression = TRUE)
+  change.first <- !options$first
+  suffixes <- if (options$indices)
+      seq_along(files)
+    else
+      file_path_sans_ext(basename(files), compression = TRUE)
   cn <- lapply(data, colnames)
   ok <- rep(list(options$ycolumn), length(data))
   ok[[1L]] <- options$xcolumn
@@ -52,7 +56,9 @@ read_and_create_unique_names <- function(files, options) {
       colnames(data[[i]])[bad] <- sprintf("%s.%i", suffixes[i],
         seq_along(cn[[i]])[bad])
     twice <- cn[[i]] %in% setdiff(unlist(cn[-i]), ok[[i]])
-    colnames(data[[i]])[twice] <- sprintf("%s.%s", cn[[i]][twice], suffixes[i])
+    if (change.first || i != 1L)
+      colnames(data[[i]])[twice] <- sprintf("%s.%s", cn[[i]][twice],
+        suffixes[i])
   }
   data
 }
@@ -104,12 +110,24 @@ option.parser <- OptionParser(option_list = list(
     help = "Encoding to be assumed in input files [default: '%default']",
     metavar = "NAME", default = ""),
 
+  make_option(c("-f", "--first"), action = "store_true",
+    help = "Do not adapt column names of file 1 [default: %default]",
+    default = FALSE),
+
+  make_option(c("-i", "--indices"), action = "store_true",
+    help = "Use indices for adapting column names [default: %default]",
+    default = FALSE),
+
   make_option(c("-j", "--join-by"), type = "character",
     help = "Join character(s) for -r/-v [default: '%default']",
     metavar = "SEP", default = "; "),
 
   make_option(c("-k", "--keep"), action = "store_true",
     help = "Keep whitespace surrounding the separators [default: %default]",
+    default = FALSE),
+
+  make_option(c("-m", "--make-header"), action = "store_true",
+    help = "Output headers even for input without headers [default: %default]",
     default = FALSE),
 
   make_option(c("-n", "--names"), action = "store_true",
